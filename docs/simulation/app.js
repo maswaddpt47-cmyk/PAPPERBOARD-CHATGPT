@@ -185,6 +185,17 @@
     next.updated = new Date().toISOString();
     return persistSavedWorkshops(savedWorkshops.map(function (entry) { return entry.workshopId === next.workshopId ? next : entry; }));
   }
+  function renameWorkshop(source, title) {
+    var next = JSON.parse(JSON.stringify(source));
+    next.title = title;
+    next.updated = new Date().toISOString();
+    if (source.workshopId === state.workshopId) {
+      var previous = state; state = next;
+      if (!save()) { state = previous; return false; }
+      return true;
+    }
+    return persistSavedWorkshops(savedWorkshops.map(function (entry) { return entry.workshopId === next.workshopId ? next : entry; }));
+  }
   function deleteWorkshop(source) {
     var remaining = allWorkshops().filter(function (entry) { return entry.workshopId !== source.workshopId; });
     if (!persistSavedWorkshops(remaining)) return false;
@@ -340,7 +351,7 @@
   }
   function liveSessionControls() {
     var s = sessionSettings();
-    return '<div class="session-controls"><section class="panel content-card"><h2>Rejoindre l’atelier</h2><div class="join-overview">' + qrMarkup() + '<div><p>Code de démonstration : <strong class="session-code">' + sessionCode() + '</strong></p><p class="muted">' + state.participants + ' / ' + state.capacity + ' participants fictifs inscrits · Inscriptions ' + (s.registrationsOpen ? 'ouvertes' : 'fermées') + '</p><a class="invitation-url" href="' + esc(invitationUrl()) + '" target="_blank" rel="noopener">' + esc(invitationUrl()) + '</a></div></div><div class="session-actions">' + button('copy-invitation', 'Copier l’invitation', 'copy', 'secondary small') + button('share-invitation', 'Partager', 'external', 'secondary small') + projectionLink() + button('toggle-registrations', s.registrationsOpen ? 'Fermer les inscriptions' : 'Rouvrir les inscriptions', 'users', 'secondary small') + button('simulate-registration', 'Simuler une inscription', 'plus', 'secondary small', isDisabled(!s.registrationsOpen || state.ended || state.participants >= state.capacity)) + button('toggle-qr', s.showQr ? 'Masquer le QR code sur la projection' : 'Afficher le QR code sur la projection', 'screen', 'secondary small') + '</div><p class="generator-note">Invitation de simulation : le parcours est testable dans ce navigateur. Scanner le QR depuis un autre appareil ne le connecte pas à cet atelier.</p></section><section class="panel content-card"><h2>Pilotage en direct</h2><div class="session-actions">' + button('show-welcome', 'Afficher l’accueil', 'screen', 'secondary small') + button('toggle-asks', s.asksOpen ? 'Fermer « Oser demander »' : 'Ouvrir « Oser demander »', 'help', 'secondary small') + '</div><p class="muted">Envoyer un signal fictif pour tester le retour du groupe :</p><div class="session-actions">' + [['fast', 'Trop vite'], ['again', 'À réexpliquer'], ['help', 'Besoin d’aide']].map(function (signal) { return button('send-signal', signal[1] + ' · ' + s.signals[signal[0]], signal[0] === 'help' ? 'hand' : 'help', 'secondary small', 'data-kind="' + signal[0] + '"'); }).join('') + button('acknowledge-help', 'Effacer les signaux', 'check', 'ghost small') + '</div><h3>Pseudonymes et classement</h3><div class="session-actions">' + button('toggle-pseudos', s.pseudos ? 'Désactiver les pseudonymes' : 'Activer les pseudonymes', 'users', 'secondary small') + button('toggle-podium', s.podium ? 'Masquer le podium' : 'Projeter le podium', 'chart', 'secondary small', isDisabled(!s.pseudos)) + '</div>' + (s.pseudos ? participantRoster() : '<p class="muted">Activez les pseudonymes pour nommer les participants inscrits.</p>') + '</section></div>';
+    return '<div class="session-controls"><section class="panel content-card"><h2>Rejoindre l’atelier</h2><div class="join-overview">' + qrMarkup() + '<div><p>Code de démonstration : <strong class="session-code">' + sessionCode() + '</strong></p><p class="muted">' + state.participants + ' / ' + state.capacity + ' participants fictifs inscrits · Inscriptions ' + (s.registrationsOpen ? 'ouvertes' : 'fermées') + '</p><a class="invitation-url" href="' + esc(invitationUrl()) + '" target="_blank" rel="noopener">' + esc(invitationUrl()) + '</a></div></div><div class="session-actions">' + button('copy-invitation', 'Copier l’invitation', 'copy', 'secondary small') + button('share-invitation', 'Partager', 'external', 'secondary small') + projectionLink() + button('toggle-registrations', s.registrationsOpen ? 'Fermer les inscriptions' : 'Rouvrir les inscriptions', 'users', 'secondary small') + button('simulate-registration', 'Simuler une inscription', 'plus', 'secondary small', isDisabled(!s.registrationsOpen || state.ended || state.participants >= state.capacity)) + button('toggle-qr', s.showQr ? 'Masquer le QR code sur la projection' : 'Afficher le QR code sur la projection', 'screen', 'secondary small') + '</div><p class="generator-note">Invitation de simulation : le parcours est testable dans ce navigateur. Scanner le QR depuis un autre appareil ne le connecte pas à cet atelier.</p></section><section class="panel content-card"><h2>Pilotage en direct</h2><div class="session-actions">' + button('show-welcome', 'Afficher l’accueil', 'screen', 'secondary small') + button('toggle-asks', s.asksOpen ? 'Fermer « Oser demander »' : 'Ouvrir « Oser demander »', 'help', 'secondary small') + button('end-session', state.ended ? 'Rouvrir la session' : 'Terminer la session', state.ended ? 'refresh' : 'check-circle', state.ended ? 'secondary small' : 'danger small') + '</div><p class="muted">Envoyer un signal fictif pour tester le retour du groupe :</p><div class="session-actions">' + [['fast', 'Trop vite'], ['again', 'À réexpliquer'], ['help', 'Besoin d’aide']].map(function (signal) { return button('send-signal', signal[1] + ' · ' + s.signals[signal[0]], signal[0] === 'help' ? 'hand' : 'help', 'secondary small', 'data-kind="' + signal[0] + '"'); }).join('') + button('acknowledge-help', 'Effacer les signaux', 'check', 'ghost small') + '</div><h3>Pseudonymes et classement</h3><div class="session-actions">' + button('toggle-pseudos', s.pseudos ? 'Désactiver les pseudonymes' : 'Activer les pseudonymes', 'users', 'secondary small') + button('toggle-podium', s.podium ? 'Masquer le podium' : 'Projeter le podium', 'chart', 'secondary small', isDisabled(!s.pseudos)) + '</div>' + (s.pseudos ? participantRoster() : '<p class="muted">Activez les pseudonymes pour nommer les participants inscrits.</p>') + '</section></div>';
   }
   function registeredPseudonyms() {
     if (!sessionSettings().pseudos) return [];
@@ -473,7 +484,7 @@
     var active = entry.workshopId === state.workshopId;
     var attrs = 'data-id="' + esc(entry.workshopId) + '"';
     var open = active ? button('go-prep', entry.archived ? 'Voir le bilan' : 'Préparer', entry.archived ? 'chart' : 'edit', 'secondary small') : button('open-saved-workshop', entry.archived ? 'Voir le bilan' : 'Ouvrir', 'arrow-right', 'secondary small', attrs);
-    return '<div class="prep-item workshop-row"><span class="number-bubble">' + ico('book') + '</span><div class="grow"><h3>' + esc(entry.title) + '</h3><p class="muted">' + entry.questions.length + ' question' + (entry.questions.length > 1 ? 's' : '') + ' · ' + (entry.archived ? 'Archivé' : active ? 'Atelier actuel' : entry.ended ? 'Terminé' : 'En préparation') + '</p></div><div class="workshop-row-actions">' + open + button('duplicate-workshop', 'Dupliquer', 'copy', 'secondary small', attrs) + button(entry.archived ? 'restore-workshop' : 'archive-workshop', entry.archived ? 'Restaurer' : 'Archiver', entry.archived ? 'refresh' : 'book', 'secondary small', attrs) + button('delete-workshop', 'Supprimer', 'trash', 'danger small', attrs) + '</div></div>';
+    return '<div class="prep-item workshop-row"><span class="number-bubble">' + ico('book') + '</span><div class="grow"><h3>' + esc(entry.title) + '</h3><p class="muted">' + entry.questions.length + ' question' + (entry.questions.length > 1 ? 's' : '') + ' · ' + (entry.archived ? 'Archivé' : active ? 'Atelier actuel' : entry.ended ? 'Terminé' : 'En préparation') + '</p></div><div class="workshop-row-actions">' + open + button('rename-workshop', 'Renommer', 'edit', 'secondary small', attrs) + button('duplicate-workshop', 'Dupliquer', 'copy', 'secondary small', attrs) + button(entry.archived ? 'restore-workshop' : 'archive-workshop', entry.archived ? 'Restaurer' : 'Archiver', entry.archived ? 'refresh' : 'book', 'secondary small', attrs) + button('delete-workshop', 'Supprimer', 'trash', 'danger small', attrs) + '</div></div>';
   }
   function renderNoWorkshop() {
     workspace.innerHTML = heading('VOTRE ESPACE', 'Aucun atelier pour le moment', 'Créez un atelier vide, générez ou importez un JSON, ou partez d’un modèle.', button('create-workshop', 'Créer un atelier', 'plus', 'primary')) + '<section class="panel empty-state"><h2>À vous de préparer le prochain atelier</h2><p>Vos futurs ateliers et leurs archives apparaîtront dans « Mes ateliers ».</p>' + button('open-library', 'Voir les modèles', 'book', 'secondary') + '</section>';
@@ -483,6 +494,10 @@
     creationDraft = null;
     showDialog('Créer un atelier', '<form id="workshop-form"><p>Donnez un nom à votre atelier et choisissez comment le préparer.</p><div class="form-field"><label class="field-label" for="workshop-title">Nom de l’atelier</label><input class="input" id="workshop-title" name="title" maxlength="120" required placeholder="Ex. Bien protéger ses comptes"></div><fieldset class="workshop-methods"><legend class="field-label">Comment commencer ?</legend><label class="workshop-method"><input type="radio" name="source" value="empty" checked><span><strong>Partir d’un atelier vide</strong><small>Ajouter vos questions une à une.</small></span></label><label class="workshop-method"><input type="radio" name="source" value="json"><span><strong>Générer ou importer un JSON</strong><small>Préparer une consigne pour l’IA, coller sa réponse ou importer un fichier.</small></span></label></fieldset><p class="generator-note">Votre atelier actuel sera conservé dans « Mes ateliers ». Le nouvel atelier reste dans ce navigateur.</p><p id="workshop-error" class="form-error" role="alert"></p><div class="modal-actions">' + button('close-dialog', 'Annuler', '', 'secondary') + '<button type="submit" class="btn primary">' + ico('arrow-right') + ' Continuer</button></div></form>', '', 'create-workshop');
     document.getElementById('workshop-title').focus();
+  }
+  function renameWorkshopDialog(entry) {
+    showDialog('Renommer un atelier', '<form id="rename-workshop-form" data-id="' + esc(entry.workshopId) + '"><p>Le nom sera actualisé dans Mes ateliers et sur les écrans de cet atelier.</p><div class="form-field"><label class="field-label" for="rename-workshop-title">Nom de l’atelier</label><input class="input" id="rename-workshop-title" name="title" maxlength="120" required value="' + esc(entry.title) + '"></div><p id="rename-workshop-error" class="form-error" role="alert"></p><div class="modal-actions">' + button('close-dialog', 'Annuler', '', 'secondary') + '<button type="submit" class="btn primary">' + ico('check') + ' Enregistrer le nom</button></div></form>', '', 'rename-workshop');
+    document.getElementById('rename-workshop-title').focus();
   }
   function showWorkshopPreparation() {
     closeDialog(); activeView = 'workshop'; activeTab = state.archived ? 'recap' : 'prep'; render();
@@ -832,6 +847,11 @@
     if (action === 'reset-question') { if (q && confirm('Effacer les réponses de cette question pour la reposer ?')) { q.counts = q.options.map(function () { return 0; }); q.responses = 0; q.texts = []; q.published = false; q.state = 'draft'; save(); render(); } return; }
     if (action === 'copy-invitation' || action === 'share-invitation') { shareInvitation(action === 'share-invitation'); return; }
     if (action === 'create-workshop') { createWorkshop(); return; }
+    if (action === 'rename-workshop') {
+      var renamed = allWorkshops().find(function (entry) { return entry.workshopId === target.dataset.id; });
+      if (renamed) renameWorkshopDialog(renamed);
+      return;
+    }
     if (['duplicate-workshop', 'archive-workshop', 'restore-workshop', 'delete-workshop'].indexOf(action) !== -1) {
       var managed = allWorkshops().find(function (entry) { return entry.workshopId === target.dataset.id; });
       if (!managed) return;
@@ -936,6 +956,16 @@
     }
   });
   document.addEventListener('submit', function (event) {
+    if (event.target.id === 'rename-workshop-form') {
+      event.preventDefault();
+      var renamed = allWorkshops().find(function (entry) { return entry.workshopId === event.target.dataset.id; });
+      var title = String(new FormData(event.target).get('title') || '').trim();
+      var renameError = document.getElementById('rename-workshop-error');
+      if (!renamed) { renameError.textContent = 'Cet atelier n’est plus disponible. Fermez cette fenêtre et choisissez un atelier.'; return; }
+      if (!title || title.length > 120) { renameError.textContent = 'Donnez un nom à l’atelier (120 caractères maximum).'; document.getElementById('rename-workshop-title').focus(); return; }
+      if (!renameWorkshop(renamed, title)) { renameError.textContent = 'Impossible d’enregistrer le nouveau nom dans ce navigateur. Le nom précédent est conservé.'; return; }
+      closeDialog(); render(); toast('Le nom de l’atelier a été enregistré.'); return;
+    }
     if (event.target.id === 'anonymous-question-form') {
       event.preventDefault();
       if (addAnonymousQuestion(new FormData(event.target).get('text'))) { var field = document.getElementById('anonymous-question'); if (field) field.value = ''; render(); toast('Votre question a été envoyée à l’animateur pour relecture.'); }

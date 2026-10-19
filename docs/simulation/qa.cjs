@@ -250,4 +250,61 @@ test('La liste des pseudonymes respecte la fermeture et la capacité des inscrip
 test('L’invitation reste copiable sans API de presse-papiers',()=>{
   action('copy-invitation');assert(app.dialogHtml().includes('invitation-copy'));assert(app.dialogHtml().includes('Invitation de simulation'));action('close-dialog');
 });
+test('Pilotage permet de terminer et rouvrir avec confirmation et conservation des réponses',()=>{
+  action('tab',{tab:'control'});
+  assert(elements.get('workspace').innerHTML.includes('Terminer la session'));
+  const questions=JSON.parse(JSON.stringify(app.state().questions));
+  sandbox.confirm=()=>false;action('end-session');assert.equal(app.state().ended,false);
+  sandbox.confirm=()=>true;action('end-session');assert.equal(app.state().ended,true);
+  assert(elements.get('workspace').innerHTML.includes('Rouvrir la session'));
+  for(const [index,q] of app.state().questions.entries()){
+    assert.notEqual(q.state,'open');assert.deepEqual([...q.counts],questions[index].counts);assert.equal(q.responses,questions[index].responses);
+  }
+  assert(app.readState().ended);action('end-session');assert.equal(app.state().ended,false);
+});
+function rename(id,title){submit({id:'rename-workshop-form',dataset:{id},values:{title}});}
+test('Renommer l’atelier actif conserve son identité et ses réponses après rechargement',()=>{
+  const previous=JSON.parse(JSON.stringify(app.state()));
+  action('rename-workshop',{id:previous.workshopId});
+  assert(app.dialogHtml().includes('value="'+app.esc(previous.title)+'"'));
+  rename(previous.workshopId,'  Atelier renommé <test>  ');
+  assert.equal(app.state().title,'Atelier renommé <test>');
+  assert.equal(app.readState().title,app.state().title);
+  assert.deepEqual(JSON.parse(JSON.stringify(app.state())),{...previous,title:app.state().title,updated:app.state().updated});
+  action('go-pilotage');assert(elements.get('workspace').innerHTML.includes('Atelier renommé &lt;test&gt;'));
+});
+test('Annuler ou donner un nom invalide laisse tous les ateliers intacts',()=>{
+  const before=JSON.stringify(app.workshops()),stored=JSON.stringify([...memory]),id=app.state().workshopId;
+  action('rename-workshop',{id});action('close-dialog');
+  for(const title of ['   ','x'.repeat(121)]){
+    action('rename-workshop',{id});rename(id,title);
+    assert(elements.get('rename-workshop-error').textContent.includes('120 caractères'));
+  }
+  assert.equal(JSON.stringify(app.workshops()),before);assert.equal(JSON.stringify([...memory]),stored);action('close-dialog');
+});
+test('Renommer un autre atelier archivé ne change pas la session active',()=>{
+  const active=JSON.stringify(app.state()),id=app.state().workshopId;
+  submit({id:'workshop-form',values:{title:'Autre atelier'}});
+  action('archive-workshop',{id});
+  const archived=JSON.parse(JSON.stringify(app.workshops().find(w=>w.workshopId===id)));
+  const current=JSON.stringify(app.state());
+  action('rename-workshop',{id});rename(id,'Archive renommée');
+  const saved=JSON.parse(memory.get('wl_sandbox_workshops_v1')).find(w=>w.workshopId===id);
+  assert.equal(saved.title,'Archive renommée');assert.equal(saved.archived,true);
+  assert.deepEqual(saved.questions,archived.questions);assert.equal(JSON.stringify(app.state()),current);
+  assert.notEqual(current,active);
+});
+test('Un refus de stockage garde le nom précédent et permet de réessayer',()=>{
+  const write=sandbox.localStorage.setItem;
+  for(const [key,id] of [['wl_sandbox_v3',app.state().workshopId],['wl_sandbox_workshops_v1',app.workshops().find(w=>w.workshopId!==app.state().workshopId).workshopId]]){
+    const before=JSON.stringify(app.workshops()),stored=JSON.stringify([...memory]);
+    action('rename-workshop',{id});
+    sandbox.localStorage.setItem=(name,value)=>{if(name===key)throw new Error('quota');write(name,value);};
+    rename(id,'Échec de renommage');
+    assert.equal(JSON.stringify(app.workshops()),before);assert.equal(JSON.stringify([...memory]),stored);
+    assert(elements.get('rename-workshop-error').textContent.includes('nom précédent'));
+    sandbox.localStorage.setItem=write;rename(id,'Nom enregistré après réessai');
+    assert.equal(app.workshops().find(w=>w.workshopId===id).title,'Nom enregistré après réessai');
+  }
+});
 console.log(tests+' scénarios validés. Aucun réseau, aucune donnée réelle.');

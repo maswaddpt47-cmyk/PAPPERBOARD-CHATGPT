@@ -69,10 +69,10 @@ de travailler sans attendre d’anciennes captures ou une archive de sandbox.
 
 | Zone | Résultat attendu |
 |---|---|
-| Mes ateliers | Créer, ouvrir, dupliquer, archiver/restaurer et supprimer. Utiliser les opérations serveur, leurs confirmations et leurs règles d’archivage anonyme. Une copie repart avec de nouveaux identifiants et sans votes. |
+| Mes ateliers | Créer, ouvrir, renommer, dupliquer, archiver/restaurer et supprimer. Renommer conserve les questions, les réponses et l’identité de l’atelier, et actualise son titre sur les écrans. Utiliser les opérations serveur, leurs confirmations et leurs règles d’archivage anonyme. Une copie repart avec de nouveaux identifiants et sans votes. |
 | Bibliothèque et archives | Distinguer les modèles pédagogiques des ateliers actifs et des archives. Préserver les thèmes personnels, séances, historiques et bilans déjà présents. |
 | Atelier | Préparer → Pilotage → Animer → Bilan. Changer d’onglet conserve la question, les réponses et l’état réel de la session. |
-| Pilotage | QR/code/lien réels, copier/partager, inscriptions ouvertes/fermées, participants, visibilité du QR, accueil, signaux et acquittement, Oser demander et modération, pseudonymes et podium. |
+| Pilotage | QR/code/lien réels, copier/partager, inscriptions ouvertes/fermées, participants, visibilité du QR, accueil, signaux et acquittement, Oser demander et modération, pseudonymes et podium. Ajouter « Terminer la session » avec la confirmation existante, puis « Rouvrir la session » ; réutiliser l’action serveur déjà présente dans Réglages/Animer. |
 | Animer | Questions, précédent/suivant en haut, ouverture/fermeture des votes, publication/masquage, réinitialisation confirmée, participation et raccourci vers Pilotage. |
 | Bilan et exports | Conserver conclusion, synthèse, CSV, JSON des questions, impression, PowerPoint, mémo et autres exports présents. Respecter leurs filtres de confidentialité et leur cohérence graphique. |
 | Participant | Joindre une vraie session, répondre, conserver une saisie en cours lors des mises à jour compatibles, voir la confirmation et suivre la question suivante. Préserver signaux, questions, variantes et réglages existants. |
