@@ -33,7 +33,7 @@ jobs:
           node docs/simulation/qa.cjs
           node docs/simulation/qa-preparation.cjs
           python3 scripts/packager-simulation.py
-          git diff --exit-code -- simulation.html docs/simulation/jetons.css
+          git diff --exit-code -- index.html simulation.html docs/simulation/jetons.css
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
       - name: Preparer la galerie et l'interface de simulation
         run: |

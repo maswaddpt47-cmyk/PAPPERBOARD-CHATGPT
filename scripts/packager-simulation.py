@@ -11,6 +11,7 @@ assert light and dark
 tokens = light.group() + '\n' + dark.group().replace('[data-theme="dark"] .screen', '.projection-modal', 1)
 (source / 'jetons.css').write_text(tokens + '\n')
 html = (source / 'index.html').read_text()
+html = html.replace('href="../../index.html"', 'href="index.html"')
 for name in ['style.css', 'refinements.css', 'jetons.css', 'charte.css']:
     tag = '<link rel="stylesheet" href="' + name + '">'
     assert tag in html
@@ -24,4 +25,6 @@ assert not re.search(r'<link[^>]+stylesheet', html)
 assert "connect-src 'none'" in html
 out = root / 'simulation.html'
 out.write_text(html)
+gallery = (root / 'docs' / 'galerie-resultats' / 'apercu-autonome.html').read_text()
+(root / 'index.html').write_text(gallery.replace('href="../simulation/index.html"', 'href="simulation.html"'))
 print(str(out) + ' : ' + str(out.stat().st_size) + ' octets')
