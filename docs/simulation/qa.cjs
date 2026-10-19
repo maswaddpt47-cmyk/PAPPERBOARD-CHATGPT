@@ -7,7 +7,7 @@ document.activeElement=element('start');
 const sandbox={document,window:{icon:()=>'<svg class="icon"></svg>'},localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)},setTimeout:()=>1,clearTimeout(){},confirm:()=>true,Blob,URL:{createObjectURL:()=> 'blob:demo',revokeObjectURL(){}},FormData:class{constructor(form){this.data=form.values}get(k){return this.data[k]??null}},console};
 vm.createContext(sandbox);
 let source=fs.readFileSync(__dirname+'/app.js','utf8');
-source=source.replace(/\}\(\)\);\s*$/, 'globalThis.__test={state:()=>state,answers,fixture,recordAnswer,render,esc,csvCell,projection,gallerySlides,resultGallery};}());');
+source=source.replace(/\}\(\)\);\s*$/, 'globalThis.__test={state:()=>state,validState,readState,answers,fixture,recordAnswer,render,esc,csvCell,projection,gallerySlides,resultGallery};}());');
 vm.runInContext(source,sandbox);const app=sandbox.__test;
 let tests=0;function test(label,fn){fn();tests++;console.log('OK '+label)}
 function action(name,data={}){const e=element();e.dataset={action:name,...data};e.closest=sel=>sel==='[data-action]'?e:null;(listeners.click||[]).forEach(fn=>fn({target:e}));}
@@ -29,7 +29,7 @@ test('La capacité limite les réponses à dix-huit',()=>{const q=app.state().qu
 test('La fin d’atelier ferme les votes et la réouverture fonctionne',()=>{action('end-session');assert(app.state().ended);assert(app.state().questions.every(q=>q.state!=='open'));action('end-session');assert(!app.state().ended)});
 test('Les formules CSV sont neutralisées et les guillemets échappés',()=>{assert(app.csvCell('=1+1').startsWith('"\''));assert(app.csvCell('  +1').startsWith('"\''));assert.equal(app.csvCell('a"b'),'"a""b"')});
 test('La bibliothèque charge une séance complète dans l’essai local',()=>{action('load-library',{id:'phone'});assert(app.state().title.includes('smartphone'));assert.equal(app.state().questions.length,8);assert(elements.get('workspace').innerHTML.includes('Le déroulé'))});
-test('La persistance utilise uniquement la clé propre au prototype',()=>{assert(memory.has('wl_sandbox_v3'));assert.equal(memory.size,1);JSON.parse(memory.get('wl_sandbox_v3'))});
+test('La persistance reste limitée aux clés propres à la simulation',()=>{assert(memory.has('wl_sandbox_v3'));assert([...memory.keys()].every(key=>['wl_sandbox_v3','wl_sandbox_workshops_v1'].includes(key)));JSON.parse(memory.get('wl_sandbox_v3'))});
 test('Changer de question remet la vue au début, avec les deux sens et la liste',()=>{
   action('tab',{tab:'live'});
   const panel=document.getElementById('current-question');
@@ -40,5 +40,52 @@ test('Changer de question remet la vue au début, avec les deux sens et la liste
   action('previous');assert.equal(app.state().current,initial);
   action('select-question',{index:'4'});assert.equal(app.state().current,4);
   assert.deepEqual(scrolls,['start','start','start']);
+});
+test('Créer un atelier vide conserve le précédent et propose l’import JSON',()=>{
+  action('close-dialog');
+  const previous=JSON.parse(JSON.stringify(app.state()));
+  action('create-workshop');
+  submit({id:'workshop-form',values:{title:'Mon nouvel atelier'}});
+  const state=app.state();
+  assert.equal(state.title,'Mon nouvel atelier');assert.equal(state.questions.length,0);
+  assert.equal(state.current,0);assert.equal(state.participants,0);assert(app.validState(state));
+  assert.equal(app.readState().title,state.title);
+  const saved=JSON.parse(memory.get('wl_sandbox_workshops_v1'));
+  assert(saved.some(entry=>entry.title===previous.title&&entry.questions.length===previous.questions.length));
+  assert(elements.get('workspace').innerHTML.includes('Générer ou importer un JSON'));
+  action('tab',{tab:'live'});assert(elements.get('workspace').innerHTML.includes('Aucune question'));
+  action('participant');action('projection');action('tab',{tab:'recap'});
+  action('tab',{tab:'prep'});
+});
+test('Le nom de l’atelier est validé avant toute modification',()=>{
+  const before=JSON.stringify(app.state());
+  for(const title of ['   ','a'.repeat(121)])submit({id:'workshop-form',values:{title}});
+  assert.equal(JSON.stringify(app.state()),before);
+  assert(elements.get('workshop-error').textContent);
+});
+test('L’ajout manuel dans un atelier vide reste rechargeable',()=>{
+  submit({id:'question-form',dataset:{index:''},values:{type:'yesno',title:'Une première question ?',description:'',correct:'1'}});
+  assert.equal(app.state().questions.length,1);assert(app.validState(app.state()));
+  assert.equal(app.readState().questions.length,1);
+});
+test('Les ateliers conservés peuvent être rouverts sans perdre le nouvel atelier',()=>{
+  const created=JSON.parse(JSON.stringify(app.state()));
+  const saved=JSON.parse(memory.get('wl_sandbox_workshops_v1'));
+  const previous=saved.find(entry=>entry.title!==created.title);
+  action('open-saved-workshop',{id:previous.workshopId});
+  assert.equal(app.state().workshopId,previous.workshopId);
+  assert.equal(JSON.stringify(app.state().questions),JSON.stringify(previous.questions));
+  action('open-saved-workshop',{id:created.workshopId});
+  assert.equal(app.state().title,created.title);assert.equal(app.state().questions.length,1);
+});
+test('Un refus d’enregistrement empêche de remplacer l’atelier actif',()=>{
+  const before=JSON.stringify(app.state()),write=sandbox.localStorage.setItem;
+  for(const blocked of ['wl_sandbox_workshops_v1','wl_sandbox_v3']){
+    sandbox.localStorage.setItem=(key,value)=>{if(key===blocked)throw new Error('quota');write(key,value);};
+    submit({id:'workshop-form',values:{title:'Ne doit pas remplacer l’atelier'}});
+    assert.equal(JSON.stringify(app.state()),before);
+    assert(elements.get('workshop-error').textContent.includes('enregistrer'));
+  }
+  sandbox.localStorage.setItem=write;
 });
 console.log(tests+' scénarios validés. Aucun réseau, aucune donnée réelle.');

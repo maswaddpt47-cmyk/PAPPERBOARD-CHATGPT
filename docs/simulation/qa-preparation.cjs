@@ -21,7 +21,7 @@ context.captureDownload = (name, text, type) => downloads.push({ name, text, typ
 vm.runInContext(source.slice(0, eventStart) + `
   download = globalThis.captureDownload;
   toast = function () {};
-  globalThis.core = { fixture, validState, readState, save, makeId, answers,
+  globalThis.core = { fixture, newWorkshopState, validState, readState, save, makeId, answers,
     recordAnswer, endingCopy, participantOptions, quickQuestion, recap,
     exportMemo, exportCSV,
     getState: function () { return state; },
@@ -66,6 +66,26 @@ test('L’aperçu des huit types ne modifie pas l’atelier', () => {
   assert.equal(preview.filter(item => item.q).length, 8);
   assert(preview.every(item => !item.error));
   assert.equal(JSON.stringify(core.getState()), before);
+});
+
+test('Un atelier vide accepte l’import JSON complet et se recharge sans démo ajoutée', () => {
+  core.setState(core.newWorkshopState('Atelier importé'));
+  assert(core.validState(core.getState()));
+  const result = importer().instance.commitImport(raw);
+  assert.equal(result.ok, true); assert.equal(result.added, 8);
+  assert.equal(core.getState().questions.length, 8);
+  assert.equal(core.getState().current, 0); assert.equal(core.getState().participants, 0);
+  assert.equal(core.readState().title, 'Atelier importé');
+  assert.equal(core.readState().questions.length, 8);
+  assert(core.validState(core.readState()));
+});
+
+test('Un atelier vide et sa conclusion seule restent rechargeables', () => {
+  core.setState(core.newWorkshopState('Sans question'));
+  core.save(); assert.equal(core.readState().questions.length, 0);
+  const result = importer().instance.commitImport(JSON.stringify([{type:'conclusion',text:'Une idée à retenir.'}]));
+  assert.equal(result.ok, true); assert.equal(core.readState().questions.length, 0);
+  assert.equal(core.readState().conclusion, 'Une idée à retenir.');
 });
 
 test('L’import réel produit un état accepté et persistant pour les huit types', () => {

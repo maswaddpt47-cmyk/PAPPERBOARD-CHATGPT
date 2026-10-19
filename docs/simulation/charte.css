@@ -48,6 +48,7 @@ h1, h2, h3, .brand-word, .metric-number { font-family: var(--wl-police-titre); }
 .projection-modal .modal-head, .projection-modal .modal-actions { border-color: var(--wl-bord); }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-color: var(--wl-focus); }
 #current-question { scroll-margin-top: 1rem; }
+.empty-workshop-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
 .question-navigation.toolbar-nav { margin: 0; padding: 1rem 1.25rem; gap: .5rem; background: var(--bg); border-bottom: 1px solid var(--border); }
 .question-navigation .btn { min-height: 44px; }
 .projection-modal[open] { display: flex; flex-direction: column; overflow: hidden; }
