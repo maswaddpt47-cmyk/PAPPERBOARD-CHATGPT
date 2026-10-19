@@ -127,4 +127,28 @@ test('Les pseudonymes suivent les inscriptions entre onglets et après rechargem
   animateur.action('toggle-podium');assert(projection.html().includes('Podium de démonstration'));
   assert.equal((projection.html().match(/<li>/g)||[]).length,3);assert.equal(names(animateur).length,after.length);
 });
+test('Afficher puis masquer les graphes et réponses reste possible depuis les deux écrans', () => {
+  animateur.action('toggle-podium');animateur.action('tab',{tab:'live'});
+  const q=animateur.state().questions[animateur.state().current];
+  if(q.published)animateur.action('toggle-results');
+  assert(animateur.html().includes('Afficher les graphes et réponses'));
+  assert(projection.html().includes('Afficher les graphes et réponses'));
+  projection.action('projection-toggle-results');
+  assert(projection.html().includes('Masquer les graphes et réponses'));
+  assert(animateur.html().includes('Masquer les graphes et réponses'));
+  assert(animateur.dialog().innerHTML.includes('participant-results'));
+  projection.action('projection-toggle-results');
+  assert(projection.html().includes('Résultats masqués'));assert(!projection.html().includes('answer-chart'));
+  assert(!animateur.dialog().innerHTML.includes('participant-results'));
+  animateur.action('toggle-results');assert(projection.html().includes('Masquer les graphes et réponses'));
+  animateur.action('toggle-results');assert(projection.html().includes('Afficher les graphes et réponses'));
+});
+test('Une publication sans réponse peut aussi être masquée depuis Projection', () => {
+  animateur.action('reset-question');animateur.action('toggle-results');
+  assert.equal(projection.state().questions[projection.state().current].responses,0);
+  assert(projection.html().includes('Masquer les graphes et réponses'));
+  projection.action('projection-toggle-results');
+  assert.equal(animateur.state().questions[animateur.state().current].published,false);
+  assert(projection.html().includes('Résultats masqués'));
+});
 console.log(tests + ' scénarios de projection et de synchronisation validés. Contrôle logique, sans navigateur.');

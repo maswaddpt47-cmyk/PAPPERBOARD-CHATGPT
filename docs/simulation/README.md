@@ -51,7 +51,11 @@ fenêtre intégrée. Les questions, votes et résultats se synchronisent par les
 événements de stockage entre les onglets du même navigateur, sur la même
 origine. Les commandes restent en haut ; **Plein écran** permet de projeter
 sur un écran externe. Ce partage entre onglets ne connecte pas d’appareils
-distants. **Bilan**
+distants. **Afficher les graphes et réponses** devient **Masquer les graphes
+et réponses** après publication, dans Animer et Projection. Le masquage retire
+aussi les résultats de l’aperçu participant, tout en conservant les réponses
+reçues. La commande Masquer fonctionne aussi pour une publication sans réponse.
+**Bilan**
 permet d’exporter les réponses fictives en CSV et le mémo. La bibliothèque
 charge trois ateliers de démonstration ; « Recommencer » ouvre une nouvelle
 démonstration en conservant l’atelier précédent.
@@ -75,7 +79,7 @@ conservation/réouverture des ateliers, annulation, création à partir de JSON,
 suppression et import dans un atelier vide sont contrôlés.
 La liste des inscrits, ses pseudonymes distincts jusqu’à la capacité de 18,
 la fermeture des inscriptions et les trois places du podium sont contrôlés.
-`node docs/simulation/qa-projection.cjs` passe ses douze scénarios de rendu et
+`node docs/simulation/qa-projection.cjs` passe ses quatorze scénarios de rendu et
 de synchronisation logique de deux onglets, sans navigateur. Les scripts intégrés
 sont syntaxiquement valides ; le fichier est autonome et les connexions réseau
 automatiques sont bloquées. Ces scénarios utilisent un DOM simplifié : ils ne
