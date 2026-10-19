@@ -22,6 +22,20 @@ conclusion avec les votes remis à zéro. Les archives restent dans la section
 La **Bibliothèque de modèles** contient les trois séances de démonstration,
 distinctes des ateliers créés et des archives.
 
+**Animer** regroupe le QR code généré localement, le code et le lien de
+démonstration, la copie/le partage de l’invitation, les inscriptions simulées
+à fermer/rouvrir, le QR à afficher/masquer sur la projection, l’accueil et le
+pilotage des questions. Suivante ouvre le vote d’une question encore à venir ;
+Réinitialiser efface ses réponses après confirmation. Les trois signaux sont
+simulables et effaçables ; « Oser demander » s’ouvre/se ferme et permet de relire,
+publier, retirer ou supprimer une question. Pseudonymes et podium restent des
+exemples d’affichage ; les scores individuels ne sont pas calculés.
+
+Le QR encode une invitation de simulation. Son parcours d’inscription fonctionne
+dans le même navigateur ; un autre appareil affiche la limite de cet essai et
+ne peut pas rejoindre une session réelle. Fermer les inscriptions empêche
+les nouvelles inscriptions fictives, sans bloquer un participant déjà inscrit.
+
 On peut également modifier la démonstration déjà chargée. Passer à **Animer**, simuler une réponse, ouvrir
 l’aperçu participant et afficher les résultats dans la projection. Le lien
 **Ouvrir la projection** utilise `target="_blank"` : un onglet dédié, sans
@@ -34,18 +48,22 @@ permet d’exporter les réponses fictives en CSV et le mémo. La bibliothèque
 charge trois ateliers de démonstration ; « Recommencer » ouvre une nouvelle
 démonstration en conservant l’atelier précédent.
 
+L’aperçu participant suit aussi la question, l’ouverture du vote, l’accueil et
+la publication des résultats. Quand la question reste identique, son formulaire
+conserve la sélection ou le texte en cours de saisie lors d’une actualisation.
+
 Tout reste dans ce navigateur. Aucun compte ni serveur PHP n’est utilisé,
 aucune session partagée entre appareils n’est créée. Les huit types sondage,
 QCM, Oui/Non, Vrai/Faux, échelle, étapes, texte et nuage de mots sont animables
 en simulation. Points, mur, post-it et gommettes restent des aperçus de galerie.
 Le lien « Voir tous les graphes » ouvre aussi la galerie des rendus réels.
 
-19/10/2026 — mesuré : `node docs/simulation/qa.cjs` passe ses 34 scénarios et
+19/10/2026 — mesuré : `node docs/simulation/qa.cjs` passe ses 43 scénarios et
 `node docs/simulation/qa-preparation.cjs` ses 16 scénarios. Création vide,
 conservation/réouverture des ateliers, annulation, création à partir de JSON,
 échec d’enregistrement avec réessai, duplication, archivage/restauration,
 suppression et import dans un atelier vide sont contrôlés.
-`node docs/simulation/qa-projection.cjs` passe ses sept scénarios de rendu et
+`node docs/simulation/qa-projection.cjs` passe ses onze scénarios de rendu et
 de synchronisation logique de deux onglets, sans navigateur. Les scripts intégrés
 sont syntaxiquement valides ; le fichier est autonome et les connexions réseau
 automatiques sont bloquées. Ces scénarios utilisent un DOM simplifié : ils ne

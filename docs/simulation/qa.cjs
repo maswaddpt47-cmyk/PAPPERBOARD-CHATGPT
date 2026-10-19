@@ -6,10 +6,11 @@ const document={activeElement:null,body:element('body'),getElementById(id){if(!e
 document.activeElement=element('start');
 const sandbox={document,window:{icon:()=>'<svg class="icon"></svg>'},localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)},setTimeout:()=>1,clearTimeout(){},confirm:()=>true,Blob,URL:{createObjectURL:()=> 'blob:demo',revokeObjectURL(){}},FormData:class{constructor(form){this.data=form.values}get(k){return this.data[k]??null}},console};
 vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(__dirname+'/../../assets/qrcode.js','utf8'),sandbox);
 sandbox.window.document=document;
 vm.runInContext(fs.readFileSync(__dirname+'/preparation-tools.js','utf8'),sandbox);
 let source=fs.readFileSync(__dirname+'/app.js','utf8');
-source=source.replace(/\}\(\)\);\s*$/, 'globalThis.__test={state:()=>state,workshops:()=>allWorkshops(),validState,readState,answers,fixture,recordAnswer,render,esc,csvCell,projection,gallerySlides,resultGallery};}());');
+source=source.replace(/\}\(\)\);\s*$/, 'globalThis.__test={state:()=>state,workshops:()=>allWorkshops(),dialogHtml:()=>dialog&&dialog.innerHTML,validState,readState,answers,fixture,recordAnswer,render,esc,csvCell,projection,gallerySlides,resultGallery};}());');
 vm.runInContext(source,sandbox);const app=sandbox.__test;
 let tests=0;function test(label,fn){fn();tests++;console.log('OK '+label)}
 function action(name,data={}){const e=element();e.dataset={action:name,...data};e.closest=sel=>sel==='[data-action]'?e:null;(listeners.click||[]).forEach(fn=>fn({target:e}));}
@@ -165,5 +166,53 @@ test('Supprimer le dernier atelier laisse une liste vide et permet une nouvelle 
   assert.equal(JSON.parse(memory.get('wl_sandbox_workshops_v1')).length,0);
   submit({id:'workshop-form',values:{title:'Premier atelier après suppression'}});
   assert.equal(app.workshops().length,1);assert.equal(JSON.parse(memory.get('wl_sandbox_workshops_v1')).length,0);
+});
+test('Animer affiche un vrai QR local et les commandes de session',()=>{
+  submit({id:'question-form',dataset:{index:''},values:{type:'yesno',title:'Question de pilotage',description:'',correct:'1'}});
+  action('tab',{tab:'live'});const html=elements.get('workspace').innerHTML;
+  assert(html.includes('data:image/gif;base64,'));
+  for(const control of ['toggle-registrations','toggle-qr','copy-invitation','share-invitation','reset-question','toggle-asks','toggle-pseudos','toggle-podium'])assert(html.includes('data-action="'+control+'"'));
+});
+test('Fermer les inscriptions bloque les nouveaux inscrits sans bloquer les inscrits',()=>{
+  action('simulate-registration');const registered=app.state().participants;assert.equal(registered,1);
+  action('toggle-registrations');action('simulate-registration');assert.equal(app.state().participants,registered);
+  action('toggle-vote');assert(app.recordAnswer(app.state().questions[0],[0],''));
+  assert.equal(app.state().questions[0].responses,1);action('toggle-registrations');
+});
+test('Le QR peut être masqué et réaffiché dans la projection',()=>{
+  action('toggle-qr');app.projection();assert(!elements.get('workspace').innerHTML.includes('projection-invitation'));
+  action('toggle-qr');app.projection();assert(elements.get('workspace').innerHTML.includes('projection-invitation'));
+});
+test('L’accueil puis Suivante lance la première question et ouvre son vote',()=>{
+  action('show-welcome');assert(app.state().session.welcome);action('next');
+  assert.equal(app.state().current,0);assert.equal(app.state().session.welcome,false);assert.equal(app.state().questions[0].state,'open');
+});
+test('Réinitialiser demande confirmation et conserve les inscrits',()=>{
+  sandbox.confirm=()=>false;action('reset-question');assert.equal(app.state().questions[0].responses,1);
+  sandbox.confirm=()=>true;action('reset-question');assert.equal(app.state().questions[0].responses,0);
+  assert.equal(app.state().questions[0].state,'draft');assert.equal(app.state().participants,1);
+});
+test('Les trois signaux se comptent et peuvent être effacés ensemble',()=>{
+  for(const kind of ['fast','again','help'])action('send-signal',{kind});
+  assert.deepEqual(JSON.parse(JSON.stringify(app.state().session.signals)),{fast:1,again:1,help:1});
+  action('acknowledge-help');assert(Object.values(app.state().session.signals).every(n=>n===0));
+});
+test('Oser demander ferme les nouvelles questions et permet la modération avant projection',()=>{
+  const text='<img src=x onerror=alert(1)> Question anonyme';
+  submit({id:'anonymous-question-form',values:{text}});assert.equal(app.state().session.asks.length,1);
+  action('toggle-asks');submit({id:'anonymous-question-form',values:{text:'Interdit lorsque fermé'}});assert.equal(app.state().session.asks.length,1);
+  action('toggle-asks');action('simulate-ask');
+  const id=app.state().session.asks[0].id;action('publish-question',{id});action('project-asks');app.projection();
+  const html=elements.get('workspace').innerHTML;assert(html.includes('&lt;img'));assert(!html.includes('sans utiliser le lien reçu'));
+  action('delete-ask',{id});assert.equal(app.state().session.asks.length,1);action('project-asks');
+});
+test('Les pseudonymes et le podium sont réversibles et identifiés comme fictifs',()=>{
+  action('toggle-pseudos');action('toggle-podium');app.projection();
+  assert(elements.get('workspace').innerHTML.includes('Podium de démonstration'));
+  assert(elements.get('workspace').innerHTML.includes('scores individuels ne sont pas calculés'));
+  action('toggle-pseudos');assert.equal(app.state().session.podium,false);
+});
+test('L’invitation reste copiable sans API de presse-papiers',()=>{
+  action('copy-invitation');assert(app.dialogHtml().includes('invitation-copy'));assert(app.dialogHtml().includes('Invitation de simulation'));action('close-dialog');
 });
 console.log(tests+' scénarios validés. Aucun réseau, aucune donnée réelle.');

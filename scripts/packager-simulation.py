@@ -16,7 +16,7 @@ for name in ['style.css', 'refinements.css', 'jetons.css', 'charte.css']:
     tag = '<link rel="stylesheet" href="' + name + '">'
     assert tag in html
     html = html.replace(tag, '<style>\n' + (source / name).read_text().replace('</style', '<\\/style') + '\n</style>')
-for name in ['icons.js', 'preparation-tools.js', 'app.js']:
+for name in ['icons.js', '../../assets/qrcode.js', 'preparation-tools.js', 'app.js']:
     tag = '<script src="' + name + '"></script>'
     assert tag in html
     html = html.replace(tag, '<script>\n' + (source / name).read_text().replace('</script', '<\\/script') + '\n</script>')

@@ -14,6 +14,9 @@
   var galleryIndex = 0;
   var projectionOnly = !!(window.location && new URLSearchParams(window.location.search).get('projection') === '1');
   var projectionGallery = false;
+  var joinOnly = !!(window.location && new URLSearchParams(window.location.search).get('join'));
+  var joinedHere = false;
+  var qrCache = Object.create(null);
   var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   var preparationTools = null;
   var creationDraft = null;
@@ -89,10 +92,27 @@
   function newWorkshopState(title) {
     return { version: 1, workshopId: makeId(), libraryId: 'custom', title: title, conclusion: '', current: 0, capacity: 18, participants: 0, ended: false, helpCount: 0, anonymousPublished: false, anonymousAnswered: false, questions: [], updated: new Date().toISOString() };
   }
+  function sessionSettings(value) {
+    var target = value || state;
+    if (!target.session) target.session = {
+      registrationsOpen: true, showQr: true, welcome: false, asksOpen: true,
+      showAsks: false, pseudos: false, podium: false,
+      signals: { fast: 0, again: 0, help: target.helpCount || 0 },
+      asks: target.libraryId === 'custom' ? [] : [{ id: 'ask-demo', text: 'Comment vérifier un lien sans cliquer dessus ?', published: !!target.anonymousPublished }]
+    };
+    return target.session;
+  }
+  function validSession(value) {
+    if (value === undefined) return true;
+    if (!value || !['registrationsOpen', 'showQr', 'welcome', 'asksOpen', 'showAsks', 'pseudos', 'podium'].every(function (key) { return typeof value[key] === 'boolean'; })) return false;
+    if (!value.signals || !['fast', 'again', 'help'].every(function (key) { return Number.isInteger(value.signals[key]) && value.signals[key] >= 0 && value.signals[key] <= 18; })) return false;
+    return Array.isArray(value.asks) && value.asks.length <= 50 && value.asks.every(function (ask, index) { return ask && typeof ask.id === 'string' && ask.id.length > 0 && ask.id.length <= 100 && value.asks.findIndex(function (entry) { return entry.id === ask.id; }) === index && typeof ask.text === 'string' && ask.text.length > 0 && ask.text.length <= 240 && typeof ask.published === 'boolean'; });
+  }
   function validState(value) {
     function integer(number, min, max) { return Number.isInteger(number) && number >= min && number <= max; }
     function text(string, min, max) { return typeof string === 'string' && string.length >= min && string.length <= max; }
     if (value && ((value.archived !== undefined && typeof value.archived !== 'boolean') || (value.placeholder !== undefined && typeof value.placeholder !== 'boolean'))) return false;
+    if (value && !validSession(value.session)) return false;
     if (!value || value.version !== 1 || !text(value.title, 1, 120) || !text(value.conclusion === undefined ? '' : value.conclusion, 0, 600) || value.capacity !== 18 || !integer(value.participants, 0, 18) || !integer(value.helpCount, 0, 18) || typeof value.ended !== 'boolean' || typeof value.anonymousPublished !== 'boolean' || !Array.isArray(value.questions) || value.questions.length > 50 || !integer(value.current, 0, Math.max(0, value.questions.length - 1))) return false;
     var ids = new Set();
     return value.questions.every(function (q) {
@@ -115,6 +135,7 @@
   }
   var state = readState();
   if (typeof state.workshopId !== 'string' || !state.workshopId || state.workshopId.length > 100) state.workshopId = makeId();
+  sessionSettings(state);
   var savedWorkshops = readSavedWorkshops();
 
   function readSavedWorkshops() {
@@ -147,6 +168,7 @@
     copy.libraryId = 'custom'; copy.current = 0; copy.participants = 0;
     copy.ended = false; copy.archived = false; copy.helpCount = 0;
     copy.anonymousPublished = false; copy.anonymousAnswered = false;
+    delete copy.session; sessionSettings(copy); copy.session.signals.help = 0;
     copy.questions.forEach(function (q) { q.id = makeId(); q.counts = q.options.map(function () { return 0; }); q.texts = []; q.responses = 0; q.state = 'draft'; q.published = false; });
     return switchWorkshop(copy);
   }
@@ -195,6 +217,7 @@
   }
 
   function render() {
+    if (joinOnly) { renderJoin(); refreshParticipant(); return; }
     if (projectionOnly) {
       document.body.classList.add('projection-mode');
       if (projectionGallery) resultGallery(); else projection();
@@ -212,6 +235,7 @@
     else if (activeView === 'library') renderLibrary();
     else if (activeView === 'history') renderHistory();
     else renderWorkshop();
+    refreshParticipant();
     if (focusedBeforeRender && focusedBeforeRender.node && !focusedBeforeRender.node.isConnected) restoreFocus(focusedBeforeRender);
   }
 
@@ -264,13 +288,67 @@
 
   function live() {
     var q = current();
-    if (!q) return '<section class="panel empty-state"><h2>Aucune question pour le moment</h2><p>Ajoutez votre première question pour lancer l’animation.</p><div class="empty-workshop-actions">' + button('add-question', 'Ajouter une question', 'plus', 'primary') + '</div></section>';
+    if (!q) return liveSessionControls() + '<section class="panel empty-state"><h2>Aucune question pour le moment</h2><p>Ajoutez votre première question pour lancer l’animation.</p><div class="empty-workshop-actions">' + button('add-question', 'Ajouter une question', 'plus', 'primary') + '</div></section>';
     var complete = q.responses >= state.capacity;
-    return '<div class="workbench">' + rail() + '<section class="panel current-panel" id="current-question"><nav class="toolbar-nav question-navigation" aria-label="Navigation entre les questions">' + button('previous', 'Précédente', 'arrow-left', 'ghost small', isDisabled(state.current === 0)) + '<span class="muted">' + (state.current + 1) + ' / ' + state.questions.length + '</span>' + button('next', 'Suivante', 'arrow-right', 'secondary small', isDisabled(state.current === state.questions.length - 1)) + '</nav><div class="question-topline">' + badge('Question ' + (state.current + 1) + ' sur ' + state.questions.length, 'neutral') + badge(state.ended ? 'Atelier terminé' : stateLabel(q), q.state === 'open' && !state.ended ? 'green' : 'neutral') + '<span class="question-type">' + esc(typeLabel(q)) + '</span></div><h2 class="question-title">' + esc(q.title) + '</h2><p class="question-description">' + esc(q.description) + '</p><div class="result-explainer"><span>' + ico('chart') + ' Vue animateur</span><span>' + (q.published ? ico('eye') + ' Résultats visibles par les participants' : ico('eye-off') + ' Résultats masqués aux participants') + '</span></div>' + answers(q, false) +
+    return liveSessionControls() + '<div class="workbench">' + rail() + '<section class="panel current-panel" id="current-question"><nav class="toolbar-nav question-navigation" aria-label="Navigation entre les questions">' + button('previous', 'Précédente', 'arrow-left', 'ghost small', isDisabled(sessionSettings().welcome)) + '<span class="muted">' + (sessionSettings().welcome ? 'Accueil' : (state.current + 1) + ' / ' + state.questions.length) + '</span>' + button('next', sessionSettings().welcome ? 'Commencer les questions' : 'Suivante', 'arrow-right', 'secondary small', isDisabled(!sessionSettings().welcome && state.current === state.questions.length - 1)) + '</nav>' + (sessionSettings().welcome ? '<p class="info-note">La projection affiche l’accueil avec le code et l’adresse. « Commencer les questions » lance la première question et ouvre son vote.</p>' : '') + '<div class="question-topline">' + badge('Question ' + (state.current + 1) + ' sur ' + state.questions.length, 'neutral') + badge(state.ended ? 'Atelier terminé' : stateLabel(q), q.state === 'open' && !state.ended ? 'green' : 'neutral') + '<span class="question-type">' + esc(typeLabel(q)) + '</span></div><h2 class="question-title">' + esc(q.title) + '</h2><p class="question-description">' + esc(q.description) + '</p><div class="result-explainer"><span>' + ico('chart') + ' Vue animateur</span><span>' + (q.published ? ico('eye') + ' Résultats visibles par les participants' : ico('eye-off') + ' Résultats masqués aux participants') + '</span></div>' + answers(q, false) +
       '<div class="live-toolbar"><div class="toolbar-main">' + button('toggle-vote', q.state === 'open' ? 'Fermer le vote' : 'Ouvrir le vote', q.state === 'open' ? 'pause' : 'play', 'primary', isDisabled(state.ended)) + button('toggle-results', q.published ? 'Masquer les résultats' : 'Afficher les résultats', q.published ? 'eye-off' : 'eye', 'secondary') + '</div></div><div class="simulation-row"><span>' + ico('sparkles') + ' Essayez l’atelier avec des réponses fictives.</span>' + button('simulate', complete ? 'Toutes les réponses reçues' : 'Simuler une réponse', 'plus', 'ghost small', isDisabled(complete || q.state !== 'open' || state.ended)) + '</div></section>' +
       '<aside class="insights"><section class="panel metric-card"><div class="panel-head"><h2 class="panel-title">Participation</h2>' + ico('users') + '</div><div class="metric-number">' + q.responses + '<span> / ' + state.capacity + '</span></div><p class="metric-caption">' + (q.type === 'steps' ? 'personnes ont participé' : 'personnes ont répondu') + '</p><div class="progress-track" role="progressbar" aria-label="Réponses reçues" aria-valuemin="0" aria-valuemax="' + state.capacity + '" aria-valuenow="' + q.responses + '"><span class="progress-fill" style="width:' + Math.min(q.responses / state.capacity * 100, 100) + '%"></span></div><p class="muted">' + (complete ? 'Tout le monde a répondu.' : (state.capacity - q.responses) + ' réponses encore attendues') + '</p></section>' +
       '<section class="panel help-card"><div class="panel-head"><h2 class="panel-title">Besoin d’un coup de main</h2></div><div class="signal-row"><span class="signal-icon">' + ico('hand') + '</span><span class="signal-copy">Je suis un peu perdu</span><strong class="signal-count">' + state.helpCount + '</strong></div><p class="muted">Un signal anonyme, pour adapter votre rythme.</p>' + (state.helpCount ? button('acknowledge-help', 'C’est pris en compte', 'check', 'ghost small') : '<p class="info-note">Vous avez pris le temps de faire le point.</p>') + '</section>' +
-      '<section class="panel inbox-card"><div class="panel-head"><h2 class="panel-title">Une question pour vous</h2>' + badge('Anonyme', 'neutral') + '</div><p class="inbox-question">« Comment vérifier un lien sans cliquer dessus ? »</p><p class="muted">' + (state.anonymousPublished ? 'Question publiée dans l’aperçu projeté.' : 'Vous seul voyez cette question pour le moment.') + '</p>' + button('publish-question', state.anonymousPublished ? 'Retirer de la projection' : 'Publier la question', state.anonymousPublished ? 'eye-off' : 'eye', 'secondary small') + '</section><p class="info-note">' + ico('help') + ' Ceci est un atelier d’essai. Tout reste dans ce navigateur.</p></aside></div><div class="session-footer">' + button('end-session', state.ended ? 'Rouvrir l’atelier' : 'Terminer l’atelier', state.ended ? 'refresh' : 'check-circle', 'ghost small') + '</div>';
+      asksControls() + '<p class="info-note">' + ico('help') + ' Ceci est un atelier d’essai. Tout reste dans ce navigateur.</p></aside></div><div class="session-footer">' + button('reset-question', 'Réinitialiser la question', 'refresh', 'danger small', isDisabled(state.ended)) + button('end-session', state.ended ? 'Rouvrir l’atelier' : 'Terminer l’atelier', state.ended ? 'refresh' : 'check-circle', 'ghost small') + '</div>';
+  }
+  function sessionCode() {
+    var hash = 2166136261, id = state.workshopId || state.title;
+    for (var i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619) >>> 0;
+    var alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', code = '';
+    for (var j = 0; j < 5; j++) { code += alphabet[hash % alphabet.length]; hash = Math.floor(hash / alphabet.length); }
+    return code;
+  }
+  function invitationUrl() {
+    var base = window.location ? (window.location.origin || '') + window.location.pathname : '';
+    return base + '?join=' + sessionCode() + '&workshop=' + encodeURIComponent(state.workshopId);
+  }
+  function qrMarkup() {
+    var url = invitationUrl();
+    if (typeof qrcode !== 'function') return '<p class="muted">Le QR code ne peut pas être affiché. Utilisez le lien ci-dessous.</p>';
+    if (!qrCache[url]) { var code = qrcode(0, 'M'); code.addData(url); code.make(); qrCache[url] = code.createDataURL(5, 4); }
+    return '<img class="session-qr" src="' + qrCache[url] + '" alt="QR code du parcours participant simulé">';
+  }
+  function liveSessionControls() {
+    var s = sessionSettings();
+    return '<div class="session-controls"><section class="panel content-card"><h2>Rejoindre l’atelier</h2><div class="join-overview">' + qrMarkup() + '<div><p>Code de démonstration : <strong class="session-code">' + sessionCode() + '</strong></p><p class="muted">' + state.participants + ' / ' + state.capacity + ' participants fictifs inscrits · Inscriptions ' + (s.registrationsOpen ? 'ouvertes' : 'fermées') + '</p><a class="invitation-url" href="' + esc(invitationUrl()) + '" target="_blank" rel="noopener">' + esc(invitationUrl()) + '</a></div></div><div class="session-actions">' + button('copy-invitation', 'Copier l’invitation', 'copy', 'secondary small') + button('share-invitation', 'Partager', 'external', 'secondary small') + projectionLink() + button('toggle-registrations', s.registrationsOpen ? 'Fermer les inscriptions' : 'Rouvrir les inscriptions', 'users', 'secondary small') + button('simulate-registration', 'Simuler une inscription', 'plus', 'secondary small', isDisabled(!s.registrationsOpen || state.ended || state.participants >= state.capacity)) + button('toggle-qr', s.showQr ? 'Masquer le QR code sur la projection' : 'Afficher le QR code sur la projection', 'screen', 'secondary small') + '</div><p class="generator-note">Invitation de simulation : le parcours est testable dans ce navigateur. Scanner le QR depuis un autre appareil ne le connecte pas à cet atelier.</p></section><section class="panel content-card"><h2>Pilotage en direct</h2><div class="session-actions">' + button('show-welcome', 'Afficher l’accueil', 'screen', 'secondary small') + button('toggle-asks', s.asksOpen ? 'Fermer « Oser demander »' : 'Ouvrir « Oser demander »', 'help', 'secondary small') + '</div><p class="muted">Envoyer un signal fictif pour tester le retour du groupe :</p><div class="session-actions">' + [['fast', 'Trop vite'], ['again', 'À réexpliquer'], ['help', 'Besoin d’aide']].map(function (signal) { return button('send-signal', signal[1] + ' · ' + s.signals[signal[0]], signal[0] === 'help' ? 'hand' : 'help', 'secondary small', 'data-kind="' + signal[0] + '"'); }).join('') + button('acknowledge-help', 'Effacer les signaux', 'check', 'ghost small') + '</div><h3>Pseudonymes et classement</h3><div class="session-actions">' + button('toggle-pseudos', s.pseudos ? 'Désactiver les pseudonymes' : 'Activer les pseudonymes', 'users', 'secondary small') + button('toggle-podium', s.podium ? 'Masquer le podium' : 'Projeter le podium', 'chart', 'secondary small', isDisabled(!s.pseudos)) + '</div>' + (s.pseudos ? podiumContent() : '<p class="muted">Activez les pseudonymes pour prévisualiser le classement.</p>') + '</section></div>';
+  }
+  function podiumContent() {
+    var names = ['Panda curieux', 'Loutre attentive', 'Héron paisible'];
+    return '<div class="podium-demo"><p class="generator-note">Exemple de classement fictif pour tester l’affichage ; les scores individuels ne sont pas calculés dans cette simulation.</p>' + (state.participants ? '<ol>' + names.slice(0, Math.min(3, state.participants)).map(function (name, i) { return '<li>' + name + ' — ' + (3 - i) + ' point' + (i < 2 ? 's' : '') + '</li>'; }).join('') + '</ol>' : '<p>Aucun participant inscrit.</p>') + '</div>';
+  }
+  function asksControls() {
+    var s = sessionSettings();
+    return '<section class="panel content-card"><h2>Oser demander</h2><p class="muted">Questions anonymes : relisez-les avant de les publier.</p><div class="session-actions">' + button('toggle-asks', s.asksOpen ? 'Fermer les questions' : 'Ouvrir les questions', 'help', 'secondary small') + button('simulate-ask', 'Simuler une question', 'plus', 'secondary small', isDisabled(!s.asksOpen || s.asks.length >= 50)) + button('project-asks', s.showAsks ? 'Revenir à la question' : 'Projeter les questions publiées', 'screen', 'secondary small') + '</div>' + (s.asks.length ? s.asks.map(function (ask) { var attrs = 'data-id="' + esc(ask.id) + '"'; return '<article class="anonymous-ask"><p>' + esc(ask.text) + '</p><div class="session-actions">' + button('publish-question', ask.published ? 'Retirer de la projection' : 'Publier', 'eye', 'secondary small', attrs) + button('delete-ask', 'Supprimer', 'trash', 'danger small', attrs) + '</div></article>'; }).join('') : '<p class="muted">Aucune question reçue.</p>') + '</section>';
+  }
+  function addAnonymousQuestion(text) {
+    var s = sessionSettings(); text = String(text || '').trim();
+    if (!s.asksOpen || !text || text.length > 240 || s.asks.length >= 50) return false;
+    s.asks.push({ id: makeId(), text: text, published: false }); save(); return true;
+  }
+  function registerParticipant() {
+    if (!sessionSettings().registrationsOpen || state.ended || state.archived || state.participants >= state.capacity) return false;
+    state.participants++; save(); return true;
+  }
+  function renderJoin() {
+    document.body.classList.add('participant-mode');
+    var expected = window.location && new URLSearchParams(window.location.search).get('workshop');
+    if (expected !== state.workshopId || state.placeholder) { workspace.innerHTML = '<section class="panel content-card join-page"><h1>Invitation de simulation</h1><p>Cette invitation correspond à un essai conservé dans le navigateur de l’animateur. Cet appareil ne peut pas s’y connecter sans serveur de session.</p></section>'; return; }
+    var s = sessionSettings();
+    workspace.innerHTML = '<section class="panel content-card join-page"><p class="eyebrow">PARTICIPANT FICTIF · SIMULATION LOCALE</p><h1>' + esc(state.title) + '</h1><p>Code : ' + sessionCode() + ' · ' + (s.registrationsOpen ? 'Inscriptions ouvertes' : 'Inscriptions fermées') + '</p>' + (joinedHere ? '<p>Votre inscription fictive est enregistrée dans cet essai.</p>' + button('participant', 'Répondre à la question', 'play', 'primary', isDisabled(!current() || s.welcome)) : button('join-session', 'S’inscrire en participant fictif', 'users', 'primary', isDisabled(!s.registrationsOpen || state.ended || state.archived || state.participants >= state.capacity))) + '<p class="generator-note">Les essais restent dans ce navigateur ; aucun appareil distant n’est connecté.</p></section>';
+  }
+  async function shareInvitation(share) {
+    var text = 'Invitation de simulation — ' + state.title + '\nCode : ' + sessionCode() + '\n' + invitationUrl() + '\nEssai local, sans connexion de participants depuis un autre appareil.';
+    try {
+      if (share && window.navigator && window.navigator.share) { await window.navigator.share({ title: state.title, text: text }); return; }
+      if (window.navigator && window.navigator.clipboard && window.navigator.clipboard.writeText) { await window.navigator.clipboard.writeText(text); toast('L’invitation a été copiée.'); return; }
+    } catch (error) { if (error.name === 'AbortError') return; }
+    showDialog('Copier l’invitation', '<p>Copiez ce texte pour tester le parcours d’invitation.</p><textarea class="textarea" id="invitation-copy" rows="7" readonly>' + esc(text) + '</textarea>', button('close-dialog', 'Fermer', '', 'secondary'), 'invitation');
+    var field = document.getElementById('invitation-copy'); field.focus(); if (typeof field.select === 'function') field.select();
   }
 
   function quickQuestion(kind, key) {
@@ -433,19 +511,51 @@
     }).join('') + '</fieldset>';
   }
 
-  function participant() {
+  function refreshParticipant() {
+    if (modalKind !== 'participant' || !dialog) return;
+    var same = !!current() && dialog.dataset.questionId === current().id;
+    var sent = same && dialog.dataset.sent === 'true';
+    var form = same && document.getElementById('participant-form');
+    var checked = form ? Array.from(form.querySelectorAll('input[name="answer"]:checked')).map(function (node) { return node.value; }) : [];
+    var text = form && form.querySelector('[name="text"]');
+    var draft = text ? text.value : '';
+    var anonymous = document.getElementById('anonymous-question');
+    var anonymousDraft = anonymous ? anonymous.value : '';
+    var focus = document.activeElement && document.activeElement.id;
+    participant(sent);
+    var newAnonymous = document.getElementById('anonymous-question');
+    if (newAnonymous) newAnonymous.value = anonymousDraft;
+    var updated = same && document.getElementById('participant-form');
+    if (updated) {
+      updated.querySelectorAll('input[name="answer"]').forEach(function (node) { node.checked = checked.indexOf(node.value) !== -1; });
+      var field = updated.querySelector('[name="text"]'); if (field) field.value = draft;
+      var target = focus && document.getElementById(focus); if (target) target.focus({ preventScroll: true });
+    }
+  }
+  function participant(sent) {
     var q = current();
     if (!q) { toast('Ajoutez ou importez une question avant d’ouvrir cet aperçu.'); return; }
+    if (state.archived) { showDialog('Atelier archivé', '<p>Cet atelier est archivé. Il doit être restauré pour reprendre les réponses.</p>', button('close-dialog', 'Fermer', '', 'secondary'), 'participant'); return; }
     if (state.ended) { showDialog('Merci pour votre participation', '<div class="participant-success">' + ico('check-circle') + '<h3>L’atelier est terminé</h3>' + endingCopy() + '</div>', button('close-dialog', 'Revenir à l’atelier', 'arrow-left', 'secondary'), 'participant'); return; }
     var fields = participantOptions(q);
-    var canAnswer = q.state === 'open' && q.responses < state.capacity;
-    var content = '<div class="phone-preview"><div class="phone-top">' + badge('Participant fictif', 'neutral') + '<span class="muted">Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div><h3>' + esc(q.title) + '</h3><p class="muted">' + esc(q.description) + '</p>' + (canAnswer ? '<form id="participant-form">' + fields + '<p id="participant-error" class="form-error" role="alert"></p><button class="btn primary" type="submit">' + ico('check') + ' Envoyer ma réponse</button></form>' : '<p class="info-note">' + (q.responses >= state.capacity ? 'Toutes les réponses de cet essai ont été reçues.' : 'Le vote est fermé. Ouvrez-le depuis l’écran animateur pour essayer.') + '</p>') + (q.published ? '<div class="participant-results"><h4>Les résultats du groupe</h4>' + answers(q, true) + (q.explanation ? '<p class="info-note">' + esc(q.explanation) + '</p>' : '') + '</div>' : '<p class="participant-privacy muted">' + ico('eye-off') + ' Les résultats du groupe ne sont pas encore publiés.</p>') + '</div>';
+    var canAnswer = !sent && !sessionSettings().welcome && q.state === 'open' && q.responses < state.capacity;
+    var content = '<div class="phone-preview"><div class="phone-top">' + badge('Participant fictif', 'neutral') + '<span class="muted">Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div><h3>' + esc(q.title) + '</h3><p class="muted">' + esc(q.description) + '</p>' + (canAnswer ? '<form id="participant-form" data-question-id="' + esc(q.id) + '">' + fields + '<p id="participant-error" class="form-error" role="alert"></p><button class="btn primary" type="submit">' + ico('check') + ' Envoyer ma réponse</button></form>' : '<p class="info-note">' + (q.responses >= state.capacity ? 'Toutes les réponses de cet essai ont été reçues.' : 'Le vote est fermé. Ouvrez-le depuis l’écran animateur pour essayer.') + '</p>') + (q.published ? '<div class="participant-results"><h4>Les résultats du groupe</h4>' + answers(q, true) + (q.explanation ? '<p class="info-note">' + esc(q.explanation) + '</p>' : '') + '</div>' : '<p class="participant-privacy muted">' + ico('eye-off') + ' Les résultats du groupe ne sont pas encore publiés.</p>') + '</div>';
+    if (sent) content = content.replace('Le vote est fermé. Ouvrez-le depuis l’écran animateur pour essayer.', 'Votre réponse est envoyée. Attendez la prochaine question.');
+    if (sessionSettings().welcome) content = content.replace('Le vote est fermé. Ouvrez-le depuis l’écran animateur pour essayer.', 'L’accueil est affiché. La question apparaîtra quand l’animateur commencera.');
+    content += '<section class="participant-extras"><h3>Signaler une difficulté</h3><div class="session-actions">' + [['fast', 'Trop vite'], ['again', 'À réexpliquer'], ['help', 'Besoin d’aide']].map(function (signal) { return button('send-signal', signal[1], 'hand', 'secondary small', 'data-kind="' + signal[0] + '"'); }).join('') + '</div><h3>Oser demander</h3>' + (sessionSettings().asksOpen ? '<form id="anonymous-question-form"><label class="field-label" for="anonymous-question">Votre question, sans nom ni donnée personnelle</label><textarea class="textarea" id="anonymous-question" name="text" maxlength="240" required></textarea><button type="submit" class="btn secondary">Envoyer la question</button></form>' : '<p>Les questions anonymes sont fermées pour le moment.</p>') + '</section>';
     showDialog('Dans la peau d’un participant', content, '', 'participant');
+    dialog.dataset.questionId = q.id; dialog.dataset.sent = sent ? 'true' : 'false';
   }
   function projection() {
     var q = current();
-    if (!q || state.archived || state.placeholder) {
+    if (state.archived || state.placeholder) {
       renderProjectionFrame('Projection de l’atelier', '<div class="projection-preview"><h3>' + (state.archived ? 'Cet atelier est archivé' : 'Aucune question à projeter pour le moment') + '</h3><p>Préparez ou ouvrez un atelier depuis l’écran animateur. La projection se mettra à jour automatiquement.</p></div>', button('result-gallery', 'Voir les formes de résultats', 'chart', 'secondary'));
+      return;
+    }
+    var settings = sessionSettings();
+    if (settings.welcome || !q || settings.showAsks || settings.podium) {
+      var extra = (settings.welcome || !q) ? '<h3>Bienvenue dans « ' + esc(state.title) + ' »</h3><p>Code de démonstration : <strong>' + sessionCode() + '</strong></p><p>' + (settings.registrationsOpen ? 'Inscriptions ouvertes' : 'Inscriptions fermées') + ' · ' + state.participants + ' participants fictifs</p>' + (settings.showQr ? '<div class="welcome-qr">' + qrMarkup() + '<p>' + esc(invitationUrl()) + '</p></div>' : '') : settings.podium ? '<h3>Podium de démonstration</h3>' + podiumContent() : '<h3>Questions du groupe</h3>' + (settings.asks.some(function (a) { return a.published; }) ? settings.asks.filter(function (a) { return a.published; }).map(function (a) { return '<article class="answer-row"><p>' + esc(a.text) + '</p></article>'; }).join('') : '<p>Aucune question publiée pour le moment.</p>');
+      renderProjectionFrame('L’écran de votre groupe', '<div class="projection-preview">' + extra + '</div>', button('projection-next', (settings.welcome || !q) ? 'Commencer les questions' : 'Revenir à la question', 'arrow-right', 'secondary', isDisabled(!q)) + button('result-gallery', 'Toutes les formes', 'chart', 'secondary small'));
       return;
     }
     var hasResponses = q.responses > 0;
@@ -457,7 +567,7 @@
       var hiddenOptions = isWritten(q) ? '<p>' + (q.type === 'wordcloud' ? 'Envoyez un mot depuis votre appareil.' : 'Écrivez votre réponse sur votre appareil.') + '</p>' : q.options.map(function (option, index) { return '<div class="answer-row"><span class="answer-letter">' + letters[index] + '</span><span class="answer-text">' + esc(option) + '</span></div>'; }).join('');
       var hiddenResults = '<div class="projection-options">' + hiddenOptions + '</div><div class="projection-wait">' + ico('users') + '<strong>' + q.responses + ' / ' + state.capacity + '</strong> réponses reçues <span>· Résultats masqués</span></div>' + resultHint;
       projectionContent = '<div class="question-topline">' + badge(stateLabel(q), q.state === 'open' ? 'green' : 'neutral') + '</div><h3>' + esc(q.title) + '</h3><p class="question-description">' + esc(q.description) + '</p>' + (q.published ? answers(q, true) + (q.explanation ? '<p class="info-note">' + esc(q.explanation) + '</p>' : '') : hiddenResults);
-      if (state.anonymousPublished) projectionContent += '<div class="projected-question"><p class="eyebrow">UNE QUESTION DU GROUPE</p><p>Comment vérifier un lien sans cliquer dessus ?</p></div>';
+      settings.asks.filter(function (ask) { return ask.published; }).forEach(function (ask) { projectionContent += '<div class="projected-question"><p class="eyebrow">UNE QUESTION DU GROUPE</p><p>' + esc(ask.text) + '</p></div>'; });
     }
     var body = '<div class="projection-preview"><div class="projection-meta"><span>WoocLight · ' + esc(state.title) + '</span><span>Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div>' + projectionContent + '</div>';
     var projectionResultsButton = q.published ? button('projection-toggle-results', 'Masquer le graphe', 'eye-off', 'secondary small') : (hasResponses ? button('projection-toggle-results', 'Afficher le graphe', 'eye', 'primary small') : '');
@@ -469,11 +579,12 @@
     return window.location.pathname + '?' + query.toString();
   }
   function projectionLink() {
-    if (!state.questions.length || state.archived) return button('projection', 'Ouvrir la projection', 'screen', 'primary', 'disabled');
+    if (state.archived || state.placeholder) return button('projection', 'Ouvrir la projection', 'screen', 'primary', 'disabled');
     return '<a class="btn primary" href="' + esc(projectionUrl()) + '" target="_blank" rel="noopener" data-action="projection" aria-label="Ouvrir la projection dans un nouvel onglet">' + ico('screen') + '<span>Ouvrir la projection</span>' + ico('external') + '</a>';
   }
   function renderProjectionFrame(title, body, actions) {
-    workspace.innerHTML = '<section class="projection-screen projection-modal"><header class="modal-head"><div><p class="eyebrow">WOOCLIGHT · PROJECTION SIMULÉE</p><h1>' + esc(title) + '</h1></div><div class="projection-window-actions">' + button('projection-fullscreen', document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran', 'screen', 'secondary small') + button('projection-close', 'Fermer la projection', 'close', 'secondary small') + '</div></header><nav class="modal-actions projection-navigation" aria-label="Commandes de la projection">' + actions + '</nav><div class="modal-body">' + body + '</div></section>';
+    var invitation = current() && !sessionSettings().welcome && sessionSettings().showQr ? '<aside class="projection-invitation">' + qrMarkup() + '<span>Code de démonstration : <strong>' + sessionCode() + '</strong></span></aside>' : '';
+    workspace.innerHTML = '<section class="projection-screen projection-modal"><header class="modal-head"><div><p class="eyebrow">WOOCLIGHT · PROJECTION SIMULÉE</p><h1>' + esc(title) + '</h1></div><div class="projection-window-actions">' + button('projection-fullscreen', document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran', 'screen', 'secondary small') + button('projection-close', 'Fermer la projection', 'close', 'secondary small') + '</div></header><nav class="modal-actions projection-navigation" aria-label="Commandes de la projection">' + actions + invitation + '</nav><div class="modal-body">' + body + '</div></section>';
     var content = workspace.querySelector('.modal-body');
     if (content) content.scrollTop = 0;
   }
@@ -573,7 +684,8 @@
   }
 
   function recordAnswer(q, values, text) {
-    if (q.responses >= state.capacity || q.state !== 'open' || state.ended) return false;
+    if (!sessionSettings().registrationsOpen && q.responses >= state.participants) return false;
+    if (q.responses >= state.capacity || q.state !== 'open' || state.ended || state.archived) return false;
     if (isWritten(q)) { if (typeof text !== 'string' || !text.trim() || text.length > (q.type === 'wordcloud' ? 80 : 240)) return false; }
     else if (!Array.isArray(values) || !values.length || values.some(function (v) { return !Number.isInteger(v) || v < 0 || v >= q.options.length; }) || new Set(values).size !== values.length || (q.type !== 'steps' && !isMulti(q) && values.length !== 1)) return false;
     q.responses++;
@@ -584,7 +696,13 @@
     return true;
   }
   function navigateQuestion(delta) {
+    if (!current()) return;
+    var settings = sessionSettings();
+    if (settings.showAsks || settings.podium) { settings.showAsks = false; settings.podium = false; save(); render(); return; }
+    if (settings.welcome && delta > 0) { settings.welcome = false; state.current = 0; if (current().state === 'draft') current().state = 'open'; save(); render(); return; }
+    if (delta < 0 && state.current === 0) { settings.welcome = true; save(); render(); return; }
     state.current = Math.max(0, Math.min(state.questions.length - 1, state.current + delta));
+    if (delta > 0 && current().state === 'draft') current().state = 'open';
     save(); render();
   }
   function revealCurrentQuestion() {
@@ -635,6 +753,19 @@
     var action = target.dataset.action;
     var index = Number(target.dataset.index);
     var q = current();
+    if (action === 'toggle-registrations') { sessionSettings().registrationsOpen = !sessionSettings().registrationsOpen; save(); render(); return; }
+    if (action === 'toggle-qr') { sessionSettings().showQr = !sessionSettings().showQr; save(); render(); return; }
+    if (action === 'show-welcome') { sessionSettings().welcome = true; sessionSettings().showAsks = false; sessionSettings().podium = false; save(); render(); return; }
+    if (action === 'simulate-registration' || action === 'join-session') { if (registerParticipant()) { if (action === 'join-session') joinedHere = true; render(); toast('Une inscription fictive a été ajoutée.'); } else toast('Les inscriptions sont fermées ou l’atelier est complet.'); return; }
+    if (action === 'toggle-asks') { sessionSettings().asksOpen = !sessionSettings().asksOpen; save(); render(); return; }
+    if (action === 'simulate-ask') { if (addAnonymousQuestion('Comment retrouver le site officiel sans utiliser le lien reçu ?')) render(); return; }
+    if (action === 'project-asks') { sessionSettings().showAsks = !sessionSettings().showAsks; sessionSettings().welcome = false; sessionSettings().podium = false; save(); render(); return; }
+    if (action === 'delete-ask') { var asks = sessionSettings().asks; if (confirm('Supprimer cette question anonyme ?')) { sessionSettings().asks = asks.filter(function (a) { return a.id !== target.dataset.id; }); save(); render(); } return; }
+    if (action === 'send-signal') { var kind = target.dataset.kind; if (['fast', 'again', 'help'].indexOf(kind) !== -1) { sessionSettings().signals[kind] = Math.min(18, sessionSettings().signals[kind] + 1); state.helpCount = sessionSettings().signals.help; save(); render(); } return; }
+    if (action === 'toggle-pseudos') { sessionSettings().pseudos = !sessionSettings().pseudos; if (!sessionSettings().pseudos) sessionSettings().podium = false; save(); render(); return; }
+    if (action === 'toggle-podium') { if (sessionSettings().pseudos) { sessionSettings().podium = !sessionSettings().podium; sessionSettings().showAsks = false; sessionSettings().welcome = false; save(); render(); } return; }
+    if (action === 'reset-question') { if (q && confirm('Effacer les réponses de cette question pour la reposer ?')) { q.counts = q.options.map(function () { return 0; }); q.responses = 0; q.texts = []; q.published = false; q.state = 'draft'; save(); render(); } return; }
+    if (action === 'copy-invitation' || action === 'share-invitation') { shareInvitation(action === 'share-invitation'); return; }
     if (action === 'create-workshop') { createWorkshop(); return; }
     if (['duplicate-workshop', 'archive-workshop', 'restore-workshop', 'delete-workshop'].indexOf(action) !== -1) {
       var managed = allWorkshops().find(function (entry) { return entry.workshopId === target.dataset.id; });
@@ -683,7 +814,7 @@
     if (action === 'open-workshop') { activeView = 'workshop'; activeTab = 'live'; render(); return; }
     if (action === 'open-library') { activeView = 'library'; render(); return; }
     if (action === 'go-prep') { activeView = 'workshop'; activeTab = 'prep'; render(); return; }
-    if (action === 'select-question') { state.current = index; save(); render(); revealCurrentQuestion(); return; }
+    if (action === 'select-question') { state.current = index; sessionSettings().welcome = false; sessionSettings().showAsks = false; sessionSettings().podium = false; save(); render(); revealCurrentQuestion(); return; }
     if (action === 'previous' || action === 'next') { navigateQuestion(action === 'next' ? 1 : -1); revealCurrentQuestion(); return; }
     if (action === 'projection-previous' || action === 'projection-next') { navigateQuestion(action === 'projection-next' ? 1 : -1); return; }
     if (action === 'projection-toggle-results') { if (q && !state.archived && q.responses > 0) { q.published = !q.published; save(); render(); toast(q.published ? 'Le graphe est maintenant visible dans la projection.' : 'Le graphe est masqué dans la projection.'); } return; }
@@ -707,8 +838,8 @@
       if (recordAnswer(q, choices, q.type === 'wordcloud' ? sampleWords[Math.floor(Math.random() * sampleWords.length)] : sampleTexts[Math.floor(Math.random() * sampleTexts.length)])) { render(); toast(q.responses === state.capacity ? '18 sur 18 : tout le groupe a répondu !' : 'Une nouvelle réponse fictive a été ajoutée.'); }
       return;
     }
-    if (action === 'acknowledge-help') { state.helpCount = 0; save(); render(); toast('Le signal a été pris en compte.'); return; }
-    if (action === 'publish-question') { state.anonymousPublished = !state.anonymousPublished; save(); render(); toast(state.anonymousPublished ? 'La question anonyme est visible dans l’aperçu projection.' : 'La question a été retirée de la projection.'); return; }
+    if (action === 'acknowledge-help') { state.helpCount = 0; sessionSettings().signals = { fast: 0, again: 0, help: 0 }; save(); render(); toast('Les signaux ont été pris en compte.'); return; }
+    if (action === 'publish-question') { var ask = sessionSettings().asks.find(function (entry) { return entry.id === target.dataset.id; }) || sessionSettings().asks[0]; if (ask) { ask.published = !ask.published; state.anonymousPublished = sessionSettings().asks.some(function (a) { return a.published; }); save(); render(); } return; }
     if (action === 'add-question') { if (state.questions.length >= 50) { toast('Cet essai peut contenir jusqu’à 50 questions.'); return; } editQuestion(null); return; }
     if (action === 'edit-question') { editQuestion(index); return; }
     if (action === 'delete-question') {
@@ -738,6 +869,12 @@
     }
   });
   document.addEventListener('submit', function (event) {
+    if (event.target.id === 'anonymous-question-form') {
+      event.preventDefault();
+      if (addAnonymousQuestion(new FormData(event.target).get('text'))) { var field = document.getElementById('anonymous-question'); if (field) field.value = ''; render(); toast('Votre question a été envoyée à l’animateur pour relecture.'); }
+      else toast('Les questions sont fermées ou le texte est invalide.');
+      return;
+    }
     if (event.target.id === 'workshop-form') {
       event.preventDefault();
       var creationForm = new FormData(event.target);
@@ -754,6 +891,7 @@
     if (event.target.id === 'participant-form') {
       event.preventDefault();
       var q = current();
+      if (!q || (event.target.dataset && event.target.dataset.questionId && event.target.dataset.questionId !== q.id)) { refreshParticipant(); return; }
       var checked = Array.from(event.target.querySelectorAll('input[name="answer"]:checked')).map(function (input) { return Number(input.value); });
       var textField = event.target.querySelector('[name="text"]');
       var text = textField ? textField.value.trim() : '';
@@ -761,6 +899,7 @@
       if (!recordAnswer(q, checked, text)) return;
       render();
       showDialog('Votre réponse est envoyée', '<div class="participant-success">' + ico('check-circle') + '<h3>Merci, c’est bien reçu !</h3><p>Vous venez d’ajouter une réponse fictive à l’atelier.</p><p class="muted">' + q.responses + ' personnes sur ' + state.capacity + ' ont répondu.</p></div>', button('close-dialog', 'Revenir à l’animation', 'arrow-left', 'primary'), 'participant');
+      dialog.dataset.questionId = q.id; dialog.dataset.sent = 'true';
       return;
     }
     if (event.target.id === 'question-form') {

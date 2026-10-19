@@ -4,9 +4,9 @@ const vm = require('vm');
 const assert = require('assert/strict');
 const source = fs.readFileSync(__dirname + '/app.js', 'utf8').replace(/\}\(\)\);\s*$/, 'globalThis.app={state:()=>state};}());');
 const memory = new Map(), tabs = [];
-function tab(projection) {
+function tab(projection, options = {}) {
   const nodes = new Map(), events = {}, browserEvents = {};
-  let dialogs = 0, document;
+  let dialogs = 0, document, lastDialog;
   function node(id = '') {
     const classes = new Set();
     return { id, dataset: {}, innerHTML: '', textContent: '', isConnected: true, disabled: false,
@@ -19,10 +19,10 @@ function tab(projection) {
   document = { activeElement: null, body: node(), documentElement: node(),
     getElementById(id) { if (!nodes.has(id)) nodes.set(id, node(id)); return nodes.get(id); },
     querySelectorAll() { return []; }, querySelector() { return null; },
-    createElement(tag) { if (tag === 'dialog') dialogs++; return node(); },
+    createElement(tag) { const created=node(); if (tag === 'dialog') { dialogs++; lastDialog=created; } return created; },
     addEventListener(k, fn) { (events[k] ||= []).push(fn); }
   };
-  const search = '?v=qa' + (projection ? '&projection=1' : '');
+  const search = options.join ? '?join=DEMO&workshop=' + options.join : '?v=qa' + (projection ? '&projection=1' : '');
   const window = { document, icon: () => '', close() {},
     location: { search, pathname: '/PAPPERBOARD-CHATGPT/simulation.html' },
     addEventListener(k, fn) { (browserEvents[k] ||= []).push(fn); }
@@ -35,6 +35,7 @@ function tab(projection) {
   const context = { document, window, localStorage, URLSearchParams, console, setTimeout: () => 1, clearTimeout() {}, confirm: () => true };
   vm.createContext(context); vm.runInContext(source, context);
   instance = { state: context.app.state, html: () => document.getElementById('workspace').innerHTML,
+    dialog: () => lastDialog,
     dialogs: () => dialogs, projectionClass: () => document.body.classList.contains('projection-mode'),
     storage(event) { (browserEvents.storage || []).forEach(fn => fn(event)); },
     action(action, extra = {}) {
@@ -65,7 +66,7 @@ test('Changer de question dans l’animateur actualise l’onglet de projection'
   assert(projection.html().includes(animateur.state().questions[animateur.state().current].title));
 });
 test('Les votes et la publication des résultats se synchronisent entre les onglets', () => {
-  animateur.action('toggle-vote'); animateur.action('simulate');
+  assert.equal(animateur.state().questions[animateur.state().current].state, 'open'); animateur.action('simulate');
   assert.equal(projection.state().questions[projection.state().current].responses, 1);
   assert(projection.html().includes('Résultats masqués'));
   animateur.action('toggle-results');
@@ -87,5 +88,30 @@ test('Archiver puis restaurer l’atelier actualise la projection sans rechargem
   const id = animateur.state().workshopId;
   animateur.action('archive-workshop', {id}); assert(projection.html().includes('Cet atelier est archivé'));
   animateur.action('restore-workshop', {id}); assert(projection.html().includes('projection-preview'));
+});
+test('L’aperçu participant suit la question et les résultats pilotés par la projection', () => {
+  animateur.action('participant');
+  projection.action('projection-next');
+  assert.equal(animateur.dialog().dataset.questionId, projection.state().questions[projection.state().current].id);
+  assert(animateur.dialog().innerHTML.includes(projection.state().questions[projection.state().current].title));
+  projection.action('projection-toggle-results');
+  assert.equal(animateur.dialog().innerHTML.includes('participant-results'), projection.state().questions[projection.state().current].published);
+});
+test('Le QR et l’ouverture des inscriptions se synchronisent avec la projection', () => {
+  animateur.action('toggle-qr');assert(!projection.html().includes('projection-invitation'));
+  animateur.action('toggle-qr');assert(projection.html().includes('projection-invitation'));
+  animateur.action('toggle-registrations');assert.equal(projection.state().session.registrationsOpen,false);
+});
+test('L’invitation locale respecte les inscriptions et synchronise le nombre d’inscrits', () => {
+  const invitation = tab(false, {join:animateur.state().workshopId});
+  const before = animateur.state().participants;
+  invitation.action('join-session');assert.equal(animateur.state().participants,before);
+  animateur.action('toggle-registrations');invitation.action('join-session');
+  assert.equal(animateur.state().participants,before+1);assert.equal(projection.state().participants,before+1);
+  assert(invitation.html().includes('Votre inscription fictive est enregistrée'));
+});
+test('Une invitation absente de ce navigateur affiche la limite de simulation', () => {
+  const invitation = tab(false, {join:'atelier-absent'});
+  assert(invitation.html().includes('Cet appareil ne peut pas s’y connecter sans serveur de session'));
 });
 console.log(tests + ' scénarios de projection et de synchronisation validés. Contrôle logique, sans navigateur.');
