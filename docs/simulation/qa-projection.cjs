@@ -114,4 +114,17 @@ test('Une invitation absente de ce navigateur affiche la limite de simulation', 
   const invitation = tab(false, {join:'atelier-absent'});
   assert(invitation.html().includes('Cet appareil ne peut pas s’y connecter sans serveur de session'));
 });
+test('Les pseudonymes suivent les inscriptions entre onglets et après rechargement', () => {
+  function names(browser) {
+    const list=browser.html().match(/<ol class="participant-roster-list">([\s\S]*?)<\/ol>/);
+    return list?[...list[1].matchAll(/<li>([^<]+)<\/li>/g)].map(match=>match[1]):[];
+  }
+  animateur.action('tab',{tab:'control'});animateur.action('toggle-pseudos');
+  const before=names(animateur);assert.equal(before.length,animateur.state().participants);assert(before.length>3);
+  const invitation=tab(false,{join:animateur.state().workshopId});invitation.action('join-session');
+  const after=names(animateur);assert.equal(after.length,before.length+1);assert.deepEqual(after.slice(0,-1),before);
+  const reloaded=tab(false);reloaded.action('tab',{tab:'control'});assert.deepEqual(names(reloaded),after);
+  animateur.action('toggle-podium');assert(projection.html().includes('Podium de démonstration'));
+  assert.equal((projection.html().match(/<li>/g)||[]).length,3);assert.equal(names(animateur).length,after.length);
+});
 console.log(tests + ' scénarios de projection et de synchronisation validés. Contrôle logique, sans navigateur.');

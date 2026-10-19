@@ -224,6 +224,29 @@ test('Les pseudonymes et le podium sont réversibles et identifiés comme fictif
   assert(elements.get('workspace').innerHTML.includes('scores individuels ne sont pas calculés'));
   action('toggle-pseudos');assert.equal(app.state().session.podium,false);
 });
+function rosterNames(html=elements.get('workspace').innerHTML){
+  const list=html.match(/<ol class="participant-roster-list">([\s\S]*?)<\/ol>/);
+  return list?[...list[1].matchAll(/<li>([^<]+)<\/li>/g)].map(match=>match[1]):[];
+}
+test('Chaque inscription ajoute un pseudonyme au-delà des trois places du podium',()=>{
+  action('tab',{tab:'control'});const before=app.state().participants;
+  action('toggle-pseudos');assert.equal(app.state().participants,before);
+  assert.equal(rosterNames().length,before);
+  for(let i=0;i<4;i++)action('simulate-registration');
+  const names=rosterNames();assert.equal(names.length,before+4);assert.equal(new Set(names).size,names.length);
+  assert.equal(names[0],'Panda curieux');assert(!elements.get('workspace').innerHTML.includes(' — 3 points'));
+  assert.equal(app.readState().participants,names.length);assert(app.readState().session.pseudos);
+  app.render();assert.deepEqual(rosterNames(),names);
+  action('toggle-pseudos');assert.equal(rosterNames().length,0);
+  action('toggle-pseudos');assert.deepEqual(rosterNames(),names);
+});
+test('La liste des pseudonymes respecte la fermeture et la capacité des inscriptions',()=>{
+  action('toggle-registrations');const before=rosterNames();action('simulate-registration');assert.deepEqual(rosterNames(),before);
+  action('toggle-registrations');while(app.state().participants<app.state().capacity)action('simulate-registration');
+  action('simulate-registration');assert.equal(rosterNames().length,18);assert.equal(new Set(rosterNames()).size,18);
+  action('toggle-podium');app.projection();assert.equal((elements.get('workspace').innerHTML.match(/<li>/g)||[]).length,3);
+  action('toggle-pseudos');
+});
 test('L’invitation reste copiable sans API de presse-papiers',()=>{
   action('copy-invitation');assert(app.dialogHtml().includes('invitation-copy'));assert(app.dialogHtml().includes('Invitation de simulation'));action('close-dialog');
 });

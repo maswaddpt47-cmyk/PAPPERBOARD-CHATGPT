@@ -32,8 +32,12 @@ de l’un à l’autre conserve la question et les réponses.
 Suivante ouvre le vote d’une question encore à venir ; Réinitialiser efface
 ses réponses après confirmation. Dans Pilotage, les trois signaux sont
 simulables et effaçables ; « Oser demander » s’ouvre/se ferme et permet de relire,
-publier, retirer ou supprimer une question. Pseudonymes et podium restent des
-exemples d’affichage ; les scores individuels ne sont pas calculés.
+publier, retirer ou supprimer une question. **Activer les pseudonymes** affiche
+la liste complète des inscrits fictifs ; **Simuler une inscription** ajoute un
+participant et son pseudonyme. Les noms restent stables au rechargement et la
+liste suit les inscriptions depuis un autre onglet du même navigateur.
+Le podium présente seulement trois noms, avec des scores explicitement fictifs ;
+les scores individuels ne sont pas calculés.
 
 Le QR encode une invitation de simulation. Son parcours d’inscription fonctionne
 dans le même navigateur ; un autre appareil affiche la limite de cet essai et
@@ -64,12 +68,14 @@ QCM, Oui/Non, Vrai/Faux, échelle, étapes, texte et nuage de mots sont animable
 en simulation. Points, mur, post-it et gommettes restent des aperçus de galerie.
 Le lien « Voir tous les graphes » ouvre aussi la galerie des rendus réels.
 
-19/10/2026 — mesuré : `node docs/simulation/qa.cjs` passe ses 43 scénarios et
+19/10/2026 — mesuré : `node docs/simulation/qa.cjs` passe ses 45 scénarios et
 `node docs/simulation/qa-preparation.cjs` ses 16 scénarios. Création vide,
 conservation/réouverture des ateliers, annulation, création à partir de JSON,
 échec d’enregistrement avec réessai, duplication, archivage/restauration,
 suppression et import dans un atelier vide sont contrôlés.
-`node docs/simulation/qa-projection.cjs` passe ses onze scénarios de rendu et
+La liste des inscrits, ses pseudonymes distincts jusqu’à la capacité de 18,
+la fermeture des inscriptions et les trois places du podium sont contrôlés.
+`node docs/simulation/qa-projection.cjs` passe ses douze scénarios de rendu et
 de synchronisation logique de deux onglets, sans navigateur. Les scripts intégrés
 sont syntaxiquement valides ; le fichier est autonome et les connexions réseau
 automatiques sont bloquées. Ces scénarios utilisent un DOM simplifié : ils ne
