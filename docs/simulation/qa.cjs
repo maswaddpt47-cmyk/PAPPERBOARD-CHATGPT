@@ -30,4 +30,15 @@ test('La fin d’atelier ferme les votes et la réouverture fonctionne',()=>{act
 test('Les formules CSV sont neutralisées et les guillemets échappés',()=>{assert(app.csvCell('=1+1').startsWith('"\''));assert(app.csvCell('  +1').startsWith('"\''));assert.equal(app.csvCell('a"b'),'"a""b"')});
 test('La bibliothèque charge une séance complète dans l’essai local',()=>{action('load-library',{id:'phone'});assert(app.state().title.includes('smartphone'));assert.equal(app.state().questions.length,8);assert(elements.get('workspace').innerHTML.includes('Le déroulé'))});
 test('La persistance utilise uniquement la clé propre au prototype',()=>{assert(memory.has('wl_sandbox_v3'));assert.equal(memory.size,1);JSON.parse(memory.get('wl_sandbox_v3'))});
+test('Changer de question remet la vue au début, avec les deux sens et la liste',()=>{
+  action('tab',{tab:'live'});
+  const panel=document.getElementById('current-question');
+  const scrolls=[];
+  panel.scrollIntoView=options=>scrolls.push(options.block);
+  const initial=app.state().current;
+  action('next');assert.equal(app.state().current,initial+1);
+  action('previous');assert.equal(app.state().current,initial);
+  action('select-question',{index:'4'});assert.equal(app.state().current,4);
+  assert.deepEqual(scrolls,['start','start','start']);
+});
 console.log(tests+' scénarios validés. Aucun réseau, aucune donnée réelle.');

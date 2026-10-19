@@ -193,8 +193,8 @@
   function live() {
     var q = current();
     var complete = q.responses >= state.capacity;
-    return '<div class="workbench">' + rail() + '<section class="panel current-panel"><div class="question-topline">' + badge('Question ' + (state.current + 1) + ' sur ' + state.questions.length, 'neutral') + badge(state.ended ? 'Atelier terminé' : stateLabel(q), q.state === 'open' && !state.ended ? 'green' : 'neutral') + '<span class="question-type">' + esc(typeLabel(q)) + '</span></div><h2 class="question-title">' + esc(q.title) + '</h2><p class="question-description">' + esc(q.description) + '</p><div class="result-explainer"><span>' + ico('chart') + ' Vue animateur</span><span>' + (q.published ? ico('eye') + ' Résultats visibles par les participants' : ico('eye-off') + ' Résultats masqués aux participants') + '</span></div>' + answers(q, false) +
-      '<div class="live-toolbar"><div class="toolbar-main">' + button('toggle-vote', q.state === 'open' ? 'Fermer le vote' : 'Ouvrir le vote', q.state === 'open' ? 'pause' : 'play', 'primary', isDisabled(state.ended)) + button('toggle-results', q.published ? 'Masquer les résultats' : 'Afficher les résultats', q.published ? 'eye-off' : 'eye', 'secondary') + '</div><div class="toolbar-nav">' + button('previous', 'Précédente', 'arrow-left', 'ghost small', isDisabled(state.current === 0)) + '<span class="muted">' + (state.current + 1) + ' / ' + state.questions.length + '</span>' + button('next', 'Suivante', 'arrow-right', 'secondary small', isDisabled(state.current === state.questions.length - 1)) + '</div></div><div class="simulation-row"><span>' + ico('sparkles') + ' Essayez l’atelier avec des réponses fictives.</span>' + button('simulate', complete ? 'Toutes les réponses reçues' : 'Simuler une réponse', 'plus', 'ghost small', isDisabled(complete || q.state !== 'open' || state.ended)) + '</div></section>' +
+    return '<div class="workbench">' + rail() + '<section class="panel current-panel" id="current-question"><nav class="toolbar-nav question-navigation" aria-label="Navigation entre les questions">' + button('previous', 'Précédente', 'arrow-left', 'ghost small', isDisabled(state.current === 0)) + '<span class="muted">' + (state.current + 1) + ' / ' + state.questions.length + '</span>' + button('next', 'Suivante', 'arrow-right', 'secondary small', isDisabled(state.current === state.questions.length - 1)) + '</nav><div class="question-topline">' + badge('Question ' + (state.current + 1) + ' sur ' + state.questions.length, 'neutral') + badge(state.ended ? 'Atelier terminé' : stateLabel(q), q.state === 'open' && !state.ended ? 'green' : 'neutral') + '<span class="question-type">' + esc(typeLabel(q)) + '</span></div><h2 class="question-title">' + esc(q.title) + '</h2><p class="question-description">' + esc(q.description) + '</p><div class="result-explainer"><span>' + ico('chart') + ' Vue animateur</span><span>' + (q.published ? ico('eye') + ' Résultats visibles par les participants' : ico('eye-off') + ' Résultats masqués aux participants') + '</span></div>' + answers(q, false) +
+      '<div class="live-toolbar"><div class="toolbar-main">' + button('toggle-vote', q.state === 'open' ? 'Fermer le vote' : 'Ouvrir le vote', q.state === 'open' ? 'pause' : 'play', 'primary', isDisabled(state.ended)) + button('toggle-results', q.published ? 'Masquer les résultats' : 'Afficher les résultats', q.published ? 'eye-off' : 'eye', 'secondary') + '</div></div><div class="simulation-row"><span>' + ico('sparkles') + ' Essayez l’atelier avec des réponses fictives.</span>' + button('simulate', complete ? 'Toutes les réponses reçues' : 'Simuler une réponse', 'plus', 'ghost small', isDisabled(complete || q.state !== 'open' || state.ended)) + '</div></section>' +
       '<aside class="insights"><section class="panel metric-card"><div class="panel-head"><h2 class="panel-title">Participation</h2>' + ico('users') + '</div><div class="metric-number">' + q.responses + '<span> / ' + state.capacity + '</span></div><p class="metric-caption">' + (q.type === 'steps' ? 'personnes ont participé' : 'personnes ont répondu') + '</p><div class="progress-track" role="progressbar" aria-label="Réponses reçues" aria-valuemin="0" aria-valuemax="' + state.capacity + '" aria-valuenow="' + q.responses + '"><span class="progress-fill" style="width:' + Math.min(q.responses / state.capacity * 100, 100) + '%"></span></div><p class="muted">' + (complete ? 'Tout le monde a répondu.' : (state.capacity - q.responses) + ' réponses encore attendues') + '</p></section>' +
       '<section class="panel help-card"><div class="panel-head"><h2 class="panel-title">Besoin d’un coup de main</h2></div><div class="signal-row"><span class="signal-icon">' + ico('hand') + '</span><span class="signal-copy">Je suis un peu perdu</span><strong class="signal-count">' + state.helpCount + '</strong></div><p class="muted">Un signal anonyme, pour adapter votre rythme.</p>' + (state.helpCount ? button('acknowledge-help', 'C’est pris en compte', 'check', 'ghost small') : '<p class="info-note">Vous avez pris le temps de faire le point.</p>') + '</section>' +
       '<section class="panel inbox-card"><div class="panel-head"><h2 class="panel-title">Une question pour vous</h2>' + badge('Anonyme', 'neutral') + '</div><p class="inbox-question">« Comment vérifier un lien sans cliquer dessus ? »</p><p class="muted">' + (state.anonymousPublished ? 'Question publiée dans l’aperçu projeté.' : 'Vous seul voyez cette question pour le moment.') + '</p>' + button('publish-question', state.anonymousPublished ? 'Retirer de la projection' : 'Publier la question', state.anonymousPublished ? 'eye-off' : 'eye', 'secondary small') + '</section><p class="info-note">' + ico('help') + ' Ceci est un atelier d’essai. Tout reste dans ce navigateur.</p></aside></div><div class="session-footer">' + button('end-session', state.ended ? 'Rouvrir l’atelier' : 'Terminer l’atelier', state.ended ? 'refresh' : 'check-circle', 'ghost small') + '</div>';
@@ -301,6 +301,7 @@
   }
   function showDialog(title, body, actions, kind) {
     var returnTo = dialog ? dialogReturnFocus : captureFocus();
+    var projected = kind === 'projection' || kind === 'gallery';
     closeDialog(false);
     dialogReturnFocus = returnTo;
     modalKind = kind || '';
@@ -308,12 +309,18 @@
     dialog.id = 'sandbox-dialog';
     dialog.className = 'modal' + ((kind === 'projection' || kind === 'gallery') ? ' projection-modal' : kind === 'preparation-import' ? ' generator-modal' : '');
     dialog.setAttribute('aria-labelledby', 'sandbox-dialog-title');
-    dialog.innerHTML = '<div class="modal-head"><div><p class="eyebrow">' + ((kind === 'projection' || kind === 'gallery') ? (kind === 'gallery' ? 'APERÇU DES RÉSULTATS' : 'APERÇU PROJECTION') : kind === 'participant' ? 'APERÇU PARTICIPANT' : 'VOTRE ESPACE D’ESSAI') + '</p><h2 id="sandbox-dialog-title">' + esc(title) + '</h2></div>' + button('close-dialog', '<span class="sr-only">Fermer</span>', 'close', 'ghost icon-btn', 'aria-label="Fermer la fenêtre"') + '</div><div class="modal-body">' + body + '</div>' + (actions ? '<div class="modal-actions">' + actions + '</div>' : '');
+    var navigation = projected && actions ? '<nav class="modal-actions projection-navigation" aria-label="' + (kind === 'gallery' ? 'Navigation entre les résultats' : 'Navigation entre les questions projetées') + '">' + actions + '</nav>' : '';
+    dialog.innerHTML = '<div class="modal-head"><div><p class="eyebrow">' + (projected ? (kind === 'gallery' ? 'APERÇU DES RÉSULTATS' : 'APERÇU PROJECTION') : kind === 'participant' ? 'APERÇU PARTICIPANT' : 'VOTRE ESPACE D’ESSAI') + '</p><h2 id="sandbox-dialog-title">' + esc(title) + '</h2></div>' + button('close-dialog', '<span class="sr-only">Fermer</span>', 'close', 'ghost icon-btn', 'aria-label="Fermer la fenêtre"') + '</div>' + navigation + '<div class="modal-body">' + body + '</div>' + (!projected && actions ? '<div class="modal-actions">' + actions + '</div>' : '');
     document.body.appendChild(dialog);
     var instance = dialog;
     instance.addEventListener('close', function () { if (dialog === instance) closeDialog(); else instance.remove(); });
     dialog.addEventListener('click', function (event) { if (event.target === dialog) { var rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeDialog(); } });
     dialog.showModal();
+    if (projected) {
+      dialog.scrollTop = 0;
+      var content = dialog.querySelector('.modal-body');
+      if (content) content.scrollTop = 0;
+    }
   }
 
   function endingCopy() { return '<p class="conclusion-copy">' + esc(state.conclusion || 'Merci pour votre participation. Gardez un petit geste à essayer après cet atelier.') + '</p>'; }
@@ -462,6 +469,11 @@
     state.current = Math.max(0, Math.min(state.questions.length - 1, state.current + delta));
     save(); render();
   }
+  function revealCurrentQuestion() {
+    if (activeView !== 'workshop' || activeTab !== 'live') return;
+    var panel = document.getElementById('current-question');
+    if (panel) panel.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }
   function download(filename, text, type) {
     var blob = new Blob([text], { type: type });
     var url = URL.createObjectURL(blob);
@@ -529,8 +541,8 @@
     if (action === 'open-workshop') { activeView = 'workshop'; activeTab = 'live'; render(); return; }
     if (action === 'open-library') { activeView = 'library'; render(); return; }
     if (action === 'go-prep') { activeTab = 'prep'; render(); return; }
-    if (action === 'select-question') { state.current = index; save(); render(); return; }
-    if (action === 'previous' || action === 'next') { navigateQuestion(action === 'next' ? 1 : -1); return; }
+    if (action === 'select-question') { state.current = index; save(); render(); revealCurrentQuestion(); return; }
+    if (action === 'previous' || action === 'next') { navigateQuestion(action === 'next' ? 1 : -1); revealCurrentQuestion(); return; }
     if (action === 'projection-previous' || action === 'projection-next') { navigateQuestion(action === 'projection-next' ? 1 : -1); projection(); return; }
     if (action === 'projection-toggle-results') { if (q.responses > 0) { q.published = !q.published; save(); projection(); toast(q.published ? 'Le graphe est maintenant visible dans la projection.' : 'Le graphe est masqué dans la projection.'); } return; }
     if (action === 'toggle-vote') { q.state = q.state === 'open' ? 'closed' : 'open'; save(); render(); toast(q.state === 'open' ? 'Le vote est ouvert. Vous pouvez simuler une réponse.' : 'Le vote est fermé.'); return; }

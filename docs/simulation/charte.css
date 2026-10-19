@@ -47,5 +47,14 @@ h1, h2, h3, .brand-word, .metric-number { font-family: var(--wl-police-titre); }
 .projection-modal .btn.primary { color: var(--wl-sur-primaire); background: var(--wl-primaire); border-color: var(--wl-primaire); }
 .projection-modal .modal-head, .projection-modal .modal-actions { border-color: var(--wl-bord); }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-color: var(--wl-focus); }
+#current-question { scroll-margin-top: 1rem; }
+.question-navigation.toolbar-nav { margin: 0; padding: 1rem 1.25rem; gap: .5rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+.question-navigation .btn { min-height: 44px; }
+.projection-modal[open] { display: flex; flex-direction: column; overflow: hidden; }
+.projection-modal > .modal-head, .projection-modal > .projection-navigation { flex-shrink: 0; }
+.projection-modal > .projection-navigation { margin: 0; border-top: 0; border-bottom: 1px solid var(--wl-bord); justify-content: flex-start; }
+.projection-navigation .btn { min-height: 44px; }
+.projection-modal > .modal-body { min-height: 0; overflow: auto; padding: 0; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.projection-preview, .result-gallery-preview { min-height: 0; }
 @media(max-width:639px) { .simulation-notice { padding: 1rem; gap: .5rem; } .simulation-notice span { flex-basis: 100%; } }
 @media print { .simulation-notice { display: none; } }
