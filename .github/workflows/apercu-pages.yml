@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - index.html
+      - simulation.html
+      - docs/simulation/**
+      - scripts/packager-simulation.py
       - .github/workflows/apercu-pages.yml
   workflow_dispatch:
 
@@ -25,11 +28,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Verifier et reconstruire la simulation
+        run: |
+          node docs/simulation/qa.cjs
+          node docs/simulation/qa-preparation.cjs
+          python3 scripts/packager-simulation.py
+          git diff --exit-code -- simulation.html docs/simulation/jetons.css
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
-      - name: Preparer uniquement l'apercu autonome
+      - name: Preparer la galerie et l'interface de simulation
         run: |
           mkdir -p _site
-          cp index.html _site/index.html
+          cp index.html simulation.html _site/
+          cp docs/simulation/exemple-import.json _site/exemple-import.json
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         with:

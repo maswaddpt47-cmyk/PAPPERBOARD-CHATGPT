@@ -1,0 +1,71 @@
+:root {
+  /* Niveau 1 — primitifs */
+  --wl-c-ivoire: #F7F0E4;  --wl-c-carte: #FFFDF8;  --wl-c-blanc: #FFFFFF;
+  --wl-c-brun: #28221E;    --wl-c-brun-doux: #7A6A5C;  --wl-c-brun-bord: #8A7A6A;
+  --wl-c-terracotta: #B74322;  --wl-c-terracotta-fonce: #A33C1E;
+  --wl-c-petrole: #10383C; --wl-c-petrole-carte: #15494E;
+  --wl-c-vert: #3D7D3D;    --wl-c-moutarde: #C99600;   --wl-c-prune: #943D78;
+
+  /* Niveau 2 — rôles, thème clair (ivoire / terracotta) */
+  --wl-primaire: var(--wl-c-terracotta);   /* boutons, liens, bandeau */
+  --wl-primaire-fonce: var(--wl-c-terracotta-fonce);
+  --wl-primaire-clair: #FBEBE1;  /* survol ; primaire dessus 4,7:1 */
+  --wl-primaire-pale: #FDF0E8;   /* choix coché ; primaire dessus 4,9:1 */
+  --wl-sur-primaire: var(--wl-c-blanc);    /* texte posé sur un fond primaire */
+  --wl-accent: #1F6F6B;          /* compte à rebours, état du vote */
+  --wl-texte: var(--wl-c-brun);
+  --wl-texte-doux: var(--wl-c-brun-doux);
+  --wl-fond: var(--wl-c-ivoire);
+  --wl-carte: var(--wl-c-carte);
+  --wl-bord: #E4D3BA;            /* filets décoratifs, jamais seul pour un champ */
+  --wl-champ: var(--wl-c-brun-bord);  /* bord des champs et des cases (3,7:1) */
+  --wl-champ-fond: var(--wl-c-carte);
+  --wl-trace: #E4D3BA;           /* fond des anneaux, jauge, colonnes, progression : visible aussi sur le fond ivoire */
+  --wl-piste: var(--wl-c-ivoire);  /* fond des barres ; les tracés SVG utilisent --wl-trace */
+  --wl-ok: #3C7B3C;
+  --wl-ok-fond: #EAF3E5;         /* ok dessus 4,5:1 */
+  --wl-ko: #B3261E;
+  --wl-focus: #1F6F6B;
+  --wl-barre: var(--wl-primaire);
+  --wl-barre-ok: var(--wl-ok);
+  /* Une couleur par réponse (la bonne réponse porte --wl-barre-ok + coche + mention).
+     b1 terracotta, b2 vert, b3 moutarde foncée, b4 prune : les quatre couleurs de la charte. */
+  --wl-b1: var(--wl-c-terracotta); --wl-b2: var(--wl-c-vert); --wl-b3: #8A6500; --wl-b4: var(--wl-c-prune);
+  --wl-b5: #1F6F6B; --wl-b6: #2F5E9E; --wl-b7: var(--wl-c-brun-doux);
+  --wl-pastille: var(--wl-b3);
+  --wl-pastille-bord: #7A4F00;
+  --wl-alerte-fond: #FFF4D6; --wl-alerte-bord: #8A6100; --wl-alerte-texte: #4D3600;
+  --wl-moutarde: #E0A22B;        /* anneau « tout le monde a répondu » (décoratif) */
+  /* Post-its : fond clair et texte foncé dans tous les thèmes (contraste ≥ 12:1). */
+  --wl-postit-texte: var(--wl-c-brun);
+  --wl-postit-0: #FFF1A8; --wl-postit-1: #D6EEF6; --wl-postit-2: #EEF3C9;
+  --wl-postit-3: #F9DCC8; --wl-postit-4: #F3DDEB; --wl-postit-5: #E4EEDB;
+  --wl-postit-sub: #4D3600;
+  /* Le QR code reste noir sur blanc pur dans tous les thèmes (lecture par l'appareil photo). */
+  --wl-qr-fond: var(--wl-c-blanc);
+
+  --wl-police: Verdana, Geneva, "DejaVu Sans", sans-serif;
+  --wl-police-titre: Georgia, "Times New Roman", serif;
+  --wl-esp-1: .25rem; --wl-esp-2: .5rem; --wl-esp-3: .75rem; --wl-esp-4: 1rem; --wl-esp-5: 1.5rem; --wl-esp-6: 2rem;
+  --wl-rayon-xs: 4px; --wl-rayon-s: 8px; --wl-rayon: 14px; --wl-rayon-pilule: 999px;
+  --wl-cible: 3rem; /* 48 px minimum pour toute cible tactile */
+  --wl-bord-fin: 1px solid var(--wl-bord);
+  --wl-ombre-couleur: rgba(80, 40, 10, .12);
+  --wl-ombre: 0 2px 0 var(--wl-bord), 0 8px 18px var(--wl-ombre-couleur);
+  --wl-ombre-note: 0 2px 4px rgba(0, 0, 0, .25);
+  --wl-voile: rgba(40, 34, 30, .62);
+  --wl-sortie: cubic-bezier(.2, .8, .2, 1);
+}
+.projection-modal {
+  --wl-fond: var(--wl-c-petrole); --wl-carte: var(--wl-c-petrole-carte);
+  --wl-texte: var(--wl-c-ivoire); --wl-texte-doux: #CFC3B0;
+  --wl-bord: #769294; --wl-piste: #2B6166; --wl-trace: #2B6166; --wl-champ: #769294; --wl-champ-fond: var(--wl-c-petrole-carte);
+  --wl-primaire: #E89B85; --wl-primaire-fonce: #E89B85; --wl-primaire-clair: var(--wl-c-petrole-carte); --wl-primaire-pale: var(--wl-c-petrole-carte);
+  --wl-sur-primaire: var(--wl-c-petrole);
+  --wl-barre: #E89B85; --wl-barre-ok: #7FD36B; --wl-ok: #7FD36B; --wl-ok-fond: var(--wl-c-petrole-carte);
+  --wl-ko: #FF9A8A; --wl-accent: #6FD0C8; --wl-focus: #F5C84C;
+  --wl-b1: #E89B85; --wl-b2: #79BE79; --wl-b3: #DDA500; --wl-b4: #D69DC4;
+  --wl-b5: #6FD0C8; --wl-b6: #8DB8F0; --wl-b7: #CFC3B0;
+  --wl-pastille: #DDA500; --wl-pastille-bord: #F5C84C; --wl-moutarde: #DDA500;
+  --wl-ombre-couleur: rgba(0, 0, 0, .35); --wl-ombre: 0 2px 0 var(--wl-ombre-couleur);
+}

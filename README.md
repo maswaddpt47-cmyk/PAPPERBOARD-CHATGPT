@@ -1,3 +1,19 @@
+# Simulation interactive sans PHP
+
+[Ouvrir l’espace animateur en simulation](https://maswaddpt47-cmyk.github.io/PAPPERBOARD-CHATGPT/simulation.html).
+
+Préparer un atelier, importer des questions JSON, animer avec des votes fictifs,
+essayer les aperçus participant et projection, puis exporter un bilan. Les essais
+restent dans le navigateur. Huit types de questions sont animables ; points,
+mur, post-it et gommettes restent des aperçus. [Mode d’emploi et limites](docs/simulation/README.md).
+
+19/10/2026 — mesuré : 18 scénarios du prototype et 14 scénarios de préparation
+passent localement sans navigateur. La publication Pages vérifie et reconstruit
+le fichier autonome avant son envoi. Aucun serveur PHP ni vote entre appareils
+n’est fourni par cette simulation.
+
+---
+
 # Tester la charte en ligne
 
 19/10/2026 — mesuré : [ouvrir les douze formes de résultats](https://maswaddpt47-cmyk.github.io/PAPPERBOARD-CHATGPT/). Déploiement Pages réussi : [exécution 39206406840](https://github.com/maswaddpt47-cmyk/PAPPERBOARD-CHATGPT/actions/runs/39206406840).

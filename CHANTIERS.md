@@ -1,3 +1,7 @@
+## Simulation de l’espace animateur sans PHP — 19/10/2026
+
+**Mesuré** : le sandbox v3 est repris dans `docs/simulation/`, avec les jetons et polices de la charte. `scripts/packager-simulation.py` produit `simulation.html` autonome. Les 18 scénarios du prototype et les 14 de préparation passent localement ; les scripts sont valides. Préparer, Animer, Bilan, Bibliothèque, Historique et aperçus participant/projection sont accessibles en simulation. Huit types sont animables, les quatre autres restent des aperçus. Les essais sont stockés dans ce navigateur ; aucun serveur PHP ni appareil distant connecté. La galerie propose un lien vers l’interface. Le workflow Pages vérifie, reconstruit et publie les deux pages. Contrôle visuel navigateur non exécuté.
+
 ## Galerie : correction réservée aux quiz — 19/10/2026
 
 **Mesuré** : le menu proposait une bonne réponse pour le classement par points, alors que ce format reflète les priorités du groupe. Échec reproduit par un test, puis corrigé : l’état `corrige` est proposé seulement aux formes avec une correction définie (Oui/Non, QCM simple et multiple dans la galerie). Les anciens liens demandant une correction hors quiz reviennent aux réponses ; une note explique le format. Les 11 scénarios de commandes passent sans navigateur. Aperçu autonome reconstruit ; les contrôles navigateur restent à effectuer. Aucun changement des règles de vote ni du serveur PHP.

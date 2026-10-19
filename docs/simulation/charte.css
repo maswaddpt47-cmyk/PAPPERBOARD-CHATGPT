@@ -1,0 +1,51 @@
+/* Adaptation du prototype aux jetons de la charte existante. */
+:root {
+  --bg: var(--wl-fond); --card: var(--wl-carte); --text: var(--wl-texte);
+  --muted: var(--wl-texte-doux); --border: var(--wl-bord);
+  --teal: var(--wl-primaire); --teal-dark: var(--wl-primaire-fonce);
+  --teal-light: var(--wl-primaire-pale); --mint: var(--wl-ok-fond);
+  --amber: var(--wl-alerte-texte); --amber-bg: var(--wl-alerte-fond);
+  --blue: var(--wl-b6); --blue-bg: var(--wl-postit-1); --red: var(--wl-ko);
+  --shadow: var(--wl-ombre); font-family: var(--wl-police);
+}
+h1, h2, h3, .brand-word, .metric-number { font-family: var(--wl-police-titre); }
+.sidebar, .topbar, .btn, .quick-card, .result-group, .simulation-row { background: var(--card); }
+.brand-mark { background: var(--wl-c-petrole); }
+.nav-item { color: var(--muted); }
+.nav-item.active, .question-item.active, .question-item:hover, .sidebar-tip { background: var(--teal-light); }
+.question-item.active { border-color: var(--wl-champ); }
+.input, .textarea { background: var(--card); border-color: var(--wl-champ); }
+.prep-item, .history-list .prep-item, .live-toolbar, .modal-actions, .phone-preview { background: var(--bg); }
+.btn.primary { background: var(--teal); color: var(--wl-sur-primaire); border-color: var(--teal); }
+.btn.primary:hover:not(:disabled) { background: var(--teal-dark); border-color: var(--teal-dark); }
+.btn.secondary { color: var(--teal); }
+.btn:hover:not(:disabled), .btn.ghost:hover:not(:disabled) { background: var(--teal-light); border-color: var(--border); }
+.btn.primary:hover:not(:disabled) { background: var(--teal-dark); border-color: var(--teal-dark); }
+.btn.danger { background: var(--card); color: var(--wl-ko); border-color: var(--wl-ko); }
+.badge.green, .participant-success { color: var(--wl-ok); background: var(--wl-ok-fond); }
+.correct-check { color: var(--wl-ok); }
+.answer-row.is-correct { border-color: var(--wl-ok); background: var(--wl-ok-fond); }
+.answer-fill, .answer-row:nth-child(1) .answer-fill { background: var(--wl-b1); }
+.answer-row:nth-child(2) .answer-fill { background: var(--wl-b2); }
+.answer-row:nth-child(3) .answer-fill { background: var(--wl-b3); }
+.answer-row:nth-child(4) .answer-fill { background: var(--wl-b4); }
+.answer-row.is-correct .answer-fill { background: var(--wl-ok); }
+.answer-track, .answer-bar, .progress-track { background: var(--wl-trace); }
+.answer-letter, .question-number { color: var(--text); background: var(--bg); }
+.sandbox-badge { color: var(--wl-c-prune); background: var(--wl-postit-4); }
+.simulation-notice { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; padding: 1rem 2rem; background: var(--card); border-bottom: 1px solid var(--border); font-size: .8rem; }
+.simulation-notice strong { color: var(--wl-c-petrole); }
+.simulation-notice span { flex: 1; min-width: 12rem; color: var(--muted); }
+.simulation-notice .btn { min-height: 44px; }
+.projection-modal { --text: var(--wl-texte); --muted: var(--wl-texte-doux); --card: var(--wl-carte); --teal: var(--wl-primaire); --teal-dark: var(--wl-primaire-fonce); background: var(--wl-fond); color: var(--wl-texte); }
+.projection-preview .answer-row, .projection-modal .modal-actions, .projection-preview .info-note { background: var(--wl-carte); border-color: var(--wl-bord); }
+.projection-preview .answer-fill { background: var(--wl-barre) !important; }
+.projection-preview .answer-row.is-correct { background: var(--wl-ok-fond); border-color: var(--wl-ok); }
+.projection-preview .answer-row.is-correct .answer-fill { background: var(--wl-ok) !important; }
+.projection-preview .correct-check { color: var(--wl-ok); }
+.projection-modal .btn.secondary, .projection-modal .btn.ghost { color: var(--wl-texte); background: var(--wl-carte); border-color: var(--wl-texte-doux); }
+.projection-modal .btn.primary { color: var(--wl-sur-primaire); background: var(--wl-primaire); border-color: var(--wl-primaire); }
+.projection-modal .modal-head, .projection-modal .modal-actions { border-color: var(--wl-bord); }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-color: var(--wl-focus); }
+@media(max-width:639px) { .simulation-notice { padding: 1rem; gap: .5rem; } .simulation-notice span { flex-basis: 100%; } }
+@media print { .simulation-notice { display: none; } }
