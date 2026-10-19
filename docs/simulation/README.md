@@ -11,6 +11,16 @@ distinct du type de public : **Groupe hétérogène** (par défaut), **Découver
 **Débutant**, **Intermédiaire**, **Avancé**. Le choix et ses consignes pédagogiques
 sont inclus dans le texte copié à l’IA pour adapter vocabulaire, difficulté et
 guidage. Aucun champ n’est ajouté au format JSON d’import ou aux participants.
+19/10/2026 — mesuré dans le code : **Fixer le nombre de questions** conserve
+un nombre manuel de 1 à 30. **Fixer la durée de l’atelier** accepte 15 à 180 minutes
+et affiche un nombre estimé, recalculé selon le niveau et le défi facultatif.
+La durée, le nombre et le budget indicatif sont copiés dans la consigne.
+Hypothèses de préparation, supposées le 19/10/2026 et non mesurées sur le terrain :
+5 minutes d’accueil, 5 de conclusion ; 5 minutes par question en Découverte,
+4 en Débutant, Avancé ou Groupe hétérogène, 3 en Intermédiaire, échanges compris ;
+10 minutes réservées si le défi est coché. Le résultat est plafonné à 30 questions.
+Une durée insuffisante pour ces réglages est signalée et empêche de copier une
+consigne incohérente. Le retour au mode nombre conserve le choix manuel.
 Dans le parcours JSON, copier une consigne pour une IA, coller sa réponse,
 choisir un fichier ou charger un exemple, puis vérifier l’aperçu et cliquer
 sur **Créer l’atelier**. Aucun nouvel atelier n’est enregistré avant cette
@@ -84,7 +94,7 @@ en simulation. Points, mur, post-it et gommettes restent des aperçus de galerie
 Le lien « Voir tous les graphes » ouvre aussi la galerie des rendus réels.
 
 19/10/2026 — mesuré : `node docs/simulation/qa.cjs` passe ses 45 scénarios et
-`node docs/simulation/qa-preparation.cjs` ses 18 scénarios. Création vide,
+`node docs/simulation/qa-preparation.cjs` ses 22 scénarios. Création vide,
 conservation/réouverture des ateliers, annulation, création à partir de JSON,
 échec d’enregistrement avec réessai, duplication, archivage/restauration,
 suppression et import dans un atelier vide sont contrôlés.
@@ -103,5 +113,6 @@ est exécuté par `.github/workflows/simulation-ui.yml`, avec Playwright et Chro
 Il mesure le contenu visible des questions et des douze formes de la galerie
 à 1920×1080, 1280×720, 1024×768 et 390×844 ; il contrôle aussi le redimensionnement,
 le plein écran, le QR agrandi, les fermetures, le focus et les cinq niveaux copiés
-dans la consigne. Les résultats sont
+dans la consigne. Le parcours couvre aussi le choix nombre/durée, son estimation,
+le défi et les durées invalides. Les journaux de contrôle sont
 dans GitHub Actions ; Chromium reste bloqué dans l’environnement local.

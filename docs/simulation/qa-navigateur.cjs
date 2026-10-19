@@ -145,9 +145,37 @@ async function fits(page, label) {
       check(prompt.includes('Niveau du public : ' + label + '.'), 'Le niveau choisi n’est pas copie : ' + level);
       check(prompt.includes('Public : seniors.'), 'Le niveau remplace le type de public');
     }
+    await levelSelect.selectOption('mixed');
+    await animateur.locator('#prep-by-duration').check();
+    check(await animateur.locator('#prep-duration').isVisible() && !await animateur.locator('#prep-count').isVisible(), 'Le choix de duree ne bascule pas les champs');
+    await animateur.locator('#prep-duration').fill('45');
+    check((await animateur.locator('#prep-planning-summary').textContent()).includes('Estimation : 8 questions'), 'Le budget de 45 minutes est incorrect');
+    await levelSelect.selectOption('discovery');
+    check((await animateur.locator('#prep-planning-summary').textContent()).includes('Estimation : 7 questions'), 'Le niveau Decouverte ne change pas le budget');
+    await levelSelect.selectOption('mixed');
+    await animateur.locator('#prep-challenge').check();
+    check((await animateur.locator('#prep-planning-summary').textContent()).includes('Estimation : 6 questions + 1 défi'), 'Le defi ne reserve pas son temps');
+    await animateur.getByRole('button', {name: 'Copier la consigne pour l’IA', exact: true}).click();
+    let prompt = await animateur.locator('#prep-prompt-output').inputValue();
+    check(prompt.includes('Durée totale de l’atelier : 45 minutes.') && prompt.includes('exactement 6 questions'), 'La duree n’est pas transmise a l’IA');
+    await animateur.locator('#prep-duration').fill('15');
+    await animateur.getByRole('button', {name: 'Copier la consigne pour l’IA', exact: true}).click();
+    check((await animateur.locator('#prep-prompt-status').textContent()).includes('au moins 24 minutes'), 'La duree trop courte est acceptee');
+    check(await animateur.locator('#prep-prompt-output').isHidden(), 'Une ancienne consigne reste affichable apres une duree invalide');
+    await animateur.locator('#prep-challenge').uncheck();
+    await levelSelect.selectOption('intermediate');
+    await animateur.locator('#prep-duration').fill('180');
+    check((await animateur.locator('#prep-planning-summary').textContent()).includes('30 questions maximum'), 'La limite de generation n’est pas expliquee');
+    await animateur.locator('#prep-by-count').check();
+    check(await animateur.locator('#prep-count').inputValue() === '8', 'Le retour au nombre perd le choix manuel');
+    check(await animateur.locator('#prep-count').isVisible() && !await animateur.locator('#prep-duration').isVisible(), 'Le choix du nombre ne bascule pas les champs');
+    await animateur.locator('#prep-count').fill('12');
+    await animateur.getByRole('button', {name: 'Copier la consigne pour l’IA', exact: true}).click();
+    prompt = await animateur.locator('#prep-prompt-output').inputValue();
+    check(prompt.includes('exactement 12 questions') && !prompt.includes('Durée totale de l’atelier'), 'Le mode nombre reprend la duree precedente');
     await animateur.getByRole('button', {name: 'Annuler la création', exact: true}).click();
     check(await animateur.evaluate(() => localStorage.getItem('wl_sandbox_v3')) === beforeCreation, 'La preparation de consigne modifie l’atelier actif');
     check(errors.length === 0, 'Erreurs JavaScript : ' + errors.join(' | '));
-    console.log('Simulation navigateur : ' + checks + ' controles reussis ; ' + cases.length + ' jeux de questions, 12 formes, 4 tailles, QR, fermeture clavier et 5 niveaux dans la consigne.');
+    console.log('Simulation navigateur : ' + checks + ' controles reussis ; ' + cases.length + ' jeux de questions, 12 formes, 4 tailles, QR, fermeture clavier, 5 niveaux et modes nombre/duree dans la consigne.');
   } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

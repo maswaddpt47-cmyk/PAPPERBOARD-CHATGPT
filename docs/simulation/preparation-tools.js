@@ -13,6 +13,26 @@
   ];
   var has = function (object, key) { return Object.prototype.hasOwnProperty.call(object, key); };
 
+  function workshopPlan(settings) {
+    var value = settings || {};
+    if (value.mode !== 'duration') return { mode: 'count', count: Math.max(1, Math.min(30, Math.round(Number(value.count) || 10))), challenge: !!value.challenge };
+    var duration = Number(value.duration);
+    if (!Number.isInteger(duration) || duration < 15 || duration > 180) return { error: 'Indiquez une durée de 15 à 180 minutes, en minutes entières.' };
+    // Planning assumptions, shown in the UI: these are preparation estimates, not measured timings.
+    var minutes = { discovery: 5, beginner: 4, intermediate: 3, advanced: 4, mixed: 4 };
+    var perQuestion = has(minutes, value.level) ? minutes[value.level] : minutes.mixed;
+    var challenge = value.challenge ? 10 : 0;
+    var minimum = 10 + challenge + perQuestion;
+    if (duration < minimum) return { error: 'Prévoyez au moins ' + minimum + ' minutes avec ce niveau et ce défi, ou retirez le défi.' };
+    var rawCount = Math.floor((duration - 10 - challenge) / perQuestion);
+    var count = Math.min(30, rawCount);
+    return { mode: 'duration', duration: duration, count: count, perQuestion: perQuestion, challenge: challenge,
+      questionMinutes: count * perQuestion, margin: duration - 10 - challenge - count * perQuestion, capped: rawCount > 30 };
+  }
+  function planningBudget(plan) {
+    return 'accueil : 5 min ; questions et échanges : ' + plan.questionMinutes + ' min' + (plan.challenge ? ' ; défi : 10 min' : '') + ' ; conclusion : 5 min ; marge : ' + plan.margin + ' min.';
+  }
+
   function bytes(text) {
     if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(text).length;
     try { return encodeURIComponent(text).replace(/%[A-F\d]{2}/gi, 'x').length; } catch (error) { return MAX_BYTES + 1; }
@@ -172,12 +192,15 @@
     var theme = typeof value.theme === 'string' && value.theme.trim() ? value.theme.trim().slice(0, 200) : 'Les bons réflexes du numérique';
     var audience = typeof value.audience === 'string' ? value.audience.trim().slice(0, 160) : 'tout public';
     var level = LEVELS.find(function (entry) { return entry.id === value.level; }) || LEVELS[0];
-    var count = Math.max(1, Math.min(30, Math.round(Number(value.count) || 10)));
+    var plan = workshopPlan(value);
+    if (plan.error) throw new Error(plan.error);
+    var count = plan.count;
     return [
       'Tu aides un animateur à préparer un atelier participatif WoocLight.',
       'Thème : ' + theme + '.', 'Public : ' + (audience || 'tout public') + '.',
       'Niveau du public : ' + level.label + '.',
       'Adaptation au niveau : ' + level.instruction,
+      plan.mode === 'duration' ? 'Durée totale de l’atelier : ' + plan.duration + ' minutes. Planning indicatif : ' + planningBudget(plan) + ' Base de préparation : environ ' + plan.perQuestion + ' min par question, échanges compris. Ajuste la longueur des consignes et des échanges pour respecter la durée.' : '',
       'Rédige exactement ' + count + ' question' + (count > 1 ? 's' : '') + ' progressive' + (count > 1 ? 's' : '') + ', en français clair et adapté au public.',
       value.quizOnly ? 'Les questions demandées sont uniquement des quiz : mcq, yesno ou truefalse. Pour les QCM, ' + (value.multiQuiz ? 'certaines questions peuvent avoir plusieurs bonnes réponses.' : 'chaque question doit avoir UNE seule bonne réponse.') : 'Varie les types adaptés : poll, mcq, yesno, truefalse, scale, text, wordcloud et steps.',
       value.challenge ? 'Ajoute ensuite UN défi pratique de type steps, en plus des questions demandées. Si les gestes diffèrent selon l’appareil, fournis 2 à 4 variantes (Windows, Mac, iPhone, Android), avec le même nombre d’étapes.' : value.quizOnly ? 'N’ajoute pas de défi : conserve uniquement les quiz demandés.' : 'Un défi steps peut être utilisé parmi les questions si cela aide l’apprentissage.',
@@ -195,7 +218,7 @@
       'Ne demande aucun nom ni donnée personnelle. Ne suppose pas qu’une réponse écrite est anonyme si elle contient un nom.',
       'Exemple de syntaxe : [{"type":"mcq","text":"Quel est le bon réflexe ?","options":["Agir dans l’urgence","Vérifier par un autre moyen"],"correct":"Vérifier par un autre moyen","multi":false,"explain":"Prenez le temps de vérifier l’expéditeur."},{"type":"conclusion","text":"Avant de cliquer, prenez le temps de vérifier."}]',
       'Le contenu sera relu et corrigé par l’animateur avant utilisation.'
-    ].join('\n');
+    ].filter(Boolean).join('\n');
   }
 
   function create(hooks) {
@@ -203,6 +226,26 @@
     var previewItems = null, verifiedRaw = null, revision = 0, opening = 0, creatingWorkshop = false;
     var esc = hooks.esc, icon = hooks.icon, button = hooks.button;
     function element(id) { return doc && doc.getElementById(id); }
+    function generatorSettings() {
+      return { theme: element('prep-theme').value, audience: element('prep-audience').value, level: element('prep-level').value,
+        mode: element('prep-by-duration').checked ? 'duration' : 'count', duration: Number(element('prep-duration').value),
+        count: Number(element('prep-count').value), quizOnly: element('prep-quiz-only').checked,
+        multiQuiz: element('prep-multi-quiz').checked, challenge: element('prep-challenge').checked };
+    }
+    function updatePlanning(clearPrompt) {
+      var summary = element('prep-planning-summary');
+      if (!summary) return;
+      var settings = generatorSettings(), durationMode = settings.mode === 'duration';
+      element('prep-count-field').hidden = durationMode;
+      element('prep-count').disabled = durationMode;
+      element('prep-duration-field').hidden = !durationMode;
+      element('prep-duration').disabled = !durationMode;
+      var plan = workshopPlan(settings);
+      if (!durationMode && (!Number.isInteger(settings.count) || settings.count < 1 || settings.count > 30)) summary.textContent = 'Choisissez de 1 à 30 questions.';
+      else if (plan.error) summary.textContent = plan.error;
+      else summary.textContent = (durationMode ? 'Estimation : ' : '') + plan.count + ' question' + (plan.count > 1 ? 's' : '') + (plan.challenge ? ' + 1 défi pratique' : '') + (plan.capped ? ' (30 questions maximum par génération)' : '') + '. ' + (durationMode ? 'Prévision pour ' + plan.duration + ' min : ' + planningBudget(plan) + ' Base indicative : ' + plan.perQuestion + ' min par question, échanges compris.' : 'La conclusion est ajoutée à part.');
+      if (clearPrompt) { element('prep-prompt-output').value = ''; element('prep-prompt-output').hidden = true; element('prep-prompt-status').textContent = ''; }
+    }
     function announce(message) { var target = element('prep-source-status'); if (target) target.textContent = message; }
     function invalidate(message) {
       revision++; previewItems = null; verifiedRaw = null;
@@ -214,10 +257,11 @@
       creatingWorkshop = !!(options && options.creating);
       opening++; previewItems = null; verifiedRaw = null; revision++;
       var state = hooks.getState();
-      var body = '<div class="generator-grid"><section class="generator-section"><div class="generator-step"><span class="number-bubble">1</span><div><h3>Préparer une consigne pour une IA</h3><p class="muted">Facultatif si vous avez déjà un fichier à importer.</p></div></div><p class="generator-note">Aucun appel à une IA n’est effectué ici. Copiez la consigne dans l’outil de votre choix, puis revenez avec sa réponse. N’y mettez aucune donnée personnelle.</p><div class="form-field"><label class="field-label" for="prep-theme">Thème de l’atelier</label><input class="input" id="prep-theme" maxlength="200" value="' + esc(state.title) + '"></div><div class="form-grid"><div class="form-field"><label class="field-label" for="prep-audience">Public</label><select class="input" id="prep-audience"><option value="tout public">Tout public</option><option value="seniors">Seniors</option><option value="collégiens">Collégiens</option><option value="agents et professionnels de l’accompagnement">Agents et professionnels</option></select></div><div class="form-field"><label class="field-label" for="prep-count">Nombre de questions</label><input class="input" id="prep-count" type="number" min="1" max="30" value="8"></div></div><div class="form-field"><label class="field-label" for="prep-level">Niveau du public</label><select class="input" id="prep-level" aria-describedby="prep-level-hint">' + LEVELS.map(function (entry) { return '<option value="' + entry.id + '"' + (entry.id === 'mixed' ? ' selected' : '') + '>' + esc(entry.label + ' — ' + entry.detail) + '</option>'; }).join('') + '</select><small id="prep-level-hint">Le niveau d’aisance numérique adapte le vocabulaire, la difficulté et le guidage de la consigne.</small></div><label class="check-line"><input id="prep-quiz-only" type="checkbox"> Uniquement des quiz</label><label class="check-line"><input id="prep-multi-quiz" type="checkbox"> Autoriser plusieurs bonnes réponses dans les QCM</label><label class="check-line"><input id="prep-challenge" type="checkbox"> Ajouter un défi pratique à étapes</label><p>' + button('prep-copy-prompt', 'Copier la consigne pour l’IA', 'copy', 'primary') + '</p><p id="prep-prompt-status" class="generator-note" role="status"></p><textarea id="prep-prompt-output" class="textarea prompt-output" rows="7" readonly hidden aria-label="Consigne à copier dans une IA"></textarea></section><section class="generator-section"><div class="generator-step"><span class="number-bubble">2</span><div><h3>Importer et relire les questions</h3><p class="muted">JSON ou réponse d’IA · 60 Ko maximum</p></div></div><div class="import-source"><label class="field-label" for="prep-raw">Collez la réponse de l’IA ou votre liste JSON</label><textarea class="textarea" id="prep-raw" rows="8" placeholder="[{ &quot;type&quot;: &quot;mcq&quot;, &quot;text&quot;: &quot;Votre question…&quot;, … }]" aria-describedby="prep-source-status"></textarea><div class="import-actions"><button class="btn secondary small" type="button" data-action="prep-pick-file">' + icon('download') + ' Importer un fichier</button><input id="prep-file" class="file-input" type="file" accept=".json,.txt,application/json,text/plain" hidden>' + button('prep-example', 'Charger un exemple', 'sparkles', 'ghost small') + '</div><p id="prep-source-status" class="generator-note" role="status">Vos questions existantes seront conservées. La conclusion importée sera proposée à part.</p><p>' + button('prep-verify', 'Vérifier et afficher l’aperçu', 'check-circle', 'secondary') + '</p></div></section></div><div id="prep-preview" class="import-preview" hidden></div>';
+      var body = '<div class="generator-grid"><section class="generator-section"><div class="generator-step"><span class="number-bubble">1</span><div><h3>Préparer une consigne pour une IA</h3><p class="muted">Facultatif si vous avez déjà un fichier à importer.</p></div></div><p class="generator-note">Aucun appel à une IA n’est effectué ici. Copiez la consigne dans l’outil de votre choix, puis revenez avec sa réponse. N’y mettez aucune donnée personnelle.</p><div class="form-field"><label class="field-label" for="prep-theme">Thème de l’atelier</label><input class="input" id="prep-theme" maxlength="200" value="' + esc(state.title) + '"></div><div class="form-grid"><div class="form-field"><label class="field-label" for="prep-audience">Public</label><select class="input" id="prep-audience"><option value="tout public">Tout public</option><option value="seniors">Seniors</option><option value="collégiens">Collégiens</option><option value="agents et professionnels de l’accompagnement">Agents et professionnels</option></select></div><div class="form-field"><label class="field-label" for="prep-level">Niveau du public</label><select class="input" id="prep-level" aria-describedby="prep-level-hint">' + LEVELS.map(function (entry) { return '<option value="' + entry.id + '"' + (entry.id === 'mixed' ? ' selected' : '') + '>' + esc(entry.label + ' — ' + entry.detail) + '</option>'; }).join('') + '</select><small id="prep-level-hint">Le niveau d’aisance numérique adapte le vocabulaire, la difficulté et le guidage de la consigne.</small></div></div><fieldset class="generator-planning"><legend class="field-label">Organiser l’atelier</legend><div class="planning-options"><label class="check-line"><input type="radio" name="prep-planning" id="prep-by-count" value="count" checked> Fixer le nombre de questions</label><label class="check-line"><input type="radio" name="prep-planning" id="prep-by-duration" value="duration"> Fixer la durée de l’atelier</label></div></fieldset><div class="generator-planning-values"><div class="form-field" id="prep-count-field"><label class="field-label" for="prep-count">Nombre de questions</label><input class="input" id="prep-count" type="number" min="1" max="30" value="8" aria-describedby="prep-planning-summary"></div><div class="form-field" id="prep-duration-field" hidden><label class="field-label" for="prep-duration">Durée de l’atelier (minutes)</label><input class="input" id="prep-duration" type="number" min="15" max="180" step="1" value="45" aria-describedby="prep-planning-summary" disabled></div></div><p id="prep-planning-summary" class="generator-note" role="status"></p><label class="check-line"><input id="prep-quiz-only" type="checkbox"> Uniquement des quiz</label><label class="check-line"><input id="prep-multi-quiz" type="checkbox"> Autoriser plusieurs bonnes réponses dans les QCM</label><label class="check-line"><input id="prep-challenge" type="checkbox"> Ajouter un défi pratique à étapes</label><p>' + button('prep-copy-prompt', 'Copier la consigne pour l’IA', 'copy', 'primary') + '</p><p id="prep-prompt-status" class="generator-note" role="status"></p><textarea id="prep-prompt-output" class="textarea prompt-output" rows="7" readonly hidden aria-label="Consigne à copier dans une IA"></textarea></section><section class="generator-section"><div class="generator-step"><span class="number-bubble">2</span><div><h3>Importer et relire les questions</h3><p class="muted">JSON ou réponse d’IA · 60 Ko maximum</p></div></div><div class="import-source"><label class="field-label" for="prep-raw">Collez la réponse de l’IA ou votre liste JSON</label><textarea class="textarea" id="prep-raw" rows="8" placeholder="[{ &quot;type&quot;: &quot;mcq&quot;, &quot;text&quot;: &quot;Votre question…&quot;, … }]" aria-describedby="prep-source-status"></textarea><div class="import-actions"><button class="btn secondary small" type="button" data-action="prep-pick-file">' + icon('download') + ' Importer un fichier</button><input id="prep-file" class="file-input" type="file" accept=".json,.txt,application/json,text/plain" hidden>' + button('prep-example', 'Charger un exemple', 'sparkles', 'ghost small') + '</div><p id="prep-source-status" class="generator-note" role="status">Vos questions existantes seront conservées. La conclusion importée sera proposée à part.</p><p>' + button('prep-verify', 'Vérifier et afficher l’aperçu', 'check-circle', 'secondary') + '</p></div></section></div><div id="prep-preview" class="import-preview" hidden></div>';
       if (creatingWorkshop) body = '<p class="generator-note">Création de « ' + esc(state.title) + ' » : générez ou importez les questions, puis vérifiez la sélection avant de créer l’atelier.</p>' + body.replace('Vos questions existantes seront conservées. La conclusion importée sera proposée à part.', 'Votre atelier actuel reste ouvert tant que le nouvel atelier n’est pas créé.');
       var actions = button('prep-cancel', creatingWorkshop ? 'Annuler la création' : 'Fermer', '', 'secondary') + '<button id="prep-commit" type="button" class="btn primary" data-action="prep-commit" disabled>' + icon('plus') + (creatingWorkshop ? ' Créer l’atelier' : ' Ajouter la sélection') + '</button>';
       hooks.showDialog(creatingWorkshop ? 'Créer un atelier — Générer ou importer un JSON' : 'Générer ou importer des questions', body, actions, 'preparation-import');
+      updatePlanning(false);
     }
     function selectionSummary() {
       if (!previewItems) return;
@@ -278,8 +322,11 @@
       var theme = element('prep-theme'), count = element('prep-count'), status = element('prep-prompt-status');
       if (!theme || !count) return;
       if (!theme.value.trim()) { status.textContent = 'Indiquez un thème avant de copier la consigne.'; theme.focus(); return; }
-      if (!Number.isInteger(Number(count.value)) || Number(count.value) < 1 || Number(count.value) > 30) { status.textContent = 'Choisissez de 1 à 30 questions.'; count.focus(); return; }
-      var prompt = buildPrompt({ theme: theme.value, audience: element('prep-audience').value, level: element('prep-level').value, count: Number(count.value), quizOnly: element('prep-quiz-only').checked, multiQuiz: element('prep-multi-quiz').checked, challenge: element('prep-challenge').checked });
+      if (!element('prep-by-duration').checked && (!Number.isInteger(Number(count.value)) || Number(count.value) < 1 || Number(count.value) > 30)) { status.textContent = 'Choisissez de 1 à 30 questions.'; count.focus(); return; }
+      var settings = generatorSettings();
+      var plan = workshopPlan(settings);
+      if (plan.error) { status.textContent = plan.error; element('prep-duration').focus(); return; }
+      var prompt = buildPrompt(settings);
       var output = element('prep-prompt-output'); output.value = prompt; output.hidden = false;
       try {
         if (!root.navigator || !root.navigator.clipboard || !root.navigator.clipboard.writeText) throw new Error('manual');
@@ -315,9 +362,13 @@
         else { var error = element('prep-capacity-error'); if (error) error.textContent = result.message; hooks.toast(result.message); }
       }
     }
-    function onInput(event) { if (event.target.id === 'prep-raw') invalidate(); }
+    function onInput(event) {
+      if (event.target.id === 'prep-raw') invalidate();
+      if (['prep-count', 'prep-duration', 'prep-theme'].indexOf(event.target.id) !== -1) updatePlanning(true);
+    }
     async function onChange(event) {
       var target = event.target;
+      if (['prep-by-count', 'prep-by-duration', 'prep-level', 'prep-challenge', 'prep-quiz-only', 'prep-multi-quiz', 'prep-audience'].indexOf(target.id) !== -1) updatePlanning(true);
       if (target.hasAttribute && target.hasAttribute('data-prep-index') && previewItems) {
         var index = Number(target.dataset.prepIndex); if (previewItems[index] && !previewItems[index].error) { previewItems[index].selected = target.checked; selectionSummary(); }
       }

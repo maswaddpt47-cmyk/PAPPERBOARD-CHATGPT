@@ -87,6 +87,28 @@ test('Le niveau absent ou inconnu revient au groupe hétérogène', () => {
     assert(!prompt.includes('Instruction non autorisée'));
   }
 });
+test('Le mode durée adapte le nombre de questions au niveau du public', () => {
+  for (const [level, count] of Object.entries({mixed: 8, discovery: 7, beginner: 8, intermediate: 11, advanced: 8})) {
+    const prompt = tools.buildPrompt({mode:'duration',duration:45,level});
+    assert(prompt.includes('Durée totale de l’atelier : 45 minutes.'));
+    assert(prompt.includes('exactement ' + count + ' questions'));
+    assert(prompt.includes('Planning indicatif'));
+  }
+});
+test('La durée réserve aussi le temps du défi demandé', () => {
+  const prompt = tools.buildPrompt({mode:'duration',duration:45,level:'mixed',challenge:true});
+  assert(prompt.includes('exactement 6 questions'));assert(prompt.includes('défi : 10 min'));
+  assert(prompt.includes('Ajoute ensuite UN défi pratique'));
+});
+test('Une durée invalide ou trop courte ne produit pas de consigne trompeuse', () => {
+  for (const duration of [14,181,45.5,'invalide']) assert.throws(()=>tools.buildPrompt({mode:'duration',duration}));
+  assert.throws(()=>tools.buildPrompt({mode:'duration',duration:15,challenge:true}));
+  assert(tools.buildPrompt({mode:'duration',duration:180,level:'intermediate'}).includes('exactement 30 questions'));
+});
+test('Le mode nombre conserve le choix manuel indépendamment de la durée', () => {
+  const prompt = tools.buildPrompt({mode:'count',count:12,duration:180,level:'mixed'});
+  assert(prompt.includes('exactement 12 questions'));assert(!prompt.includes('Durée totale de l’atelier'));
+});
 
 test('Un atelier vide accepte l’import JSON complet et se recharge sans démo ajoutée', () => {
   core.setState(core.newWorkshopState('Atelier importé'));
