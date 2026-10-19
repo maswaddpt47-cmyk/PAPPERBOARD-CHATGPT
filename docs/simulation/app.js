@@ -588,7 +588,7 @@
       return;
     }
     var hasResponses = q.responses > 0;
-    var resultHint = !q.published && hasResponses ? '<div class="projection-result-hint"><span>' + ico('eye-off') + ' Les réponses sont prêtes mais encore masquées.</span><button type="button" class="btn secondary small" data-action="projection-toggle-results">Afficher les graphes et réponses</button></div>' : '';
+    var resultHint = !q.published && hasResponses ? '<div class="projection-result-hint"><span>' + ico('eye-off') + ' Les réponses sont prêtes mais encore masquées.</span></div>' : '';
     var projectionContent;
     if (state.ended) {
       projectionContent = '<div class="projection-ending"><p class="eyebrow">MERCI POUR VOTRE PARTICIPATION</p><h3>Les idées à emporter</h3>' + endingCopy() + '</div>';
