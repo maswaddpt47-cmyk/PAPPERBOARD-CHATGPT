@@ -10,7 +10,7 @@
 <body class="screen" id="g-body">
 <div class="g-bar" id="g-bar">
   <label>Forme <select id="g-type"></select></label>
-  <label>État <select id="g-state"></select></label>
+  <label>État <select id="g-state" aria-describedby="g-note"></select></label>
   <label>Mode <select id="g-mode">
     <option value="screen-dark">Projection sombre</option>
     <option value="screen-light">Projection claire</option>
@@ -22,7 +22,7 @@
     <span id="g-position" class="g-position" role="status" aria-live="polite"></span>
     <button id="g-next" class="btn" type="button">Suivant →</button>
   </div>
-  <span class="g-note">Données fictives · Les résultats de l'application sont affichés dès l'ouverture. Choisissez une forme, un état et un mode.</span>
+  <span class="g-note" id="g-note" role="status" aria-live="polite">Données fictives · Choisissez une forme, un état et un mode.</span>
 </div>
 <main class="screen-main" id="g-main">
   <p class="s-meta" id="g-meta"></p>

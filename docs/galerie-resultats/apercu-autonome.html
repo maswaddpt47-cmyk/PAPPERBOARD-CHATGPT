@@ -739,7 +739,7 @@ body.screen { background: var(--wl-fond); color: var(--wl-texte); }
 <body class="screen" id="g-body">
 <div class="g-bar" id="g-bar">
   <label>Forme <select id="g-type"></select></label>
-  <label>État <select id="g-state"></select></label>
+  <label>État <select id="g-state" aria-describedby="g-note"></select></label>
   <label>Mode <select id="g-mode">
     <option value="screen-dark">Projection sombre</option>
     <option value="screen-light">Projection claire</option>
@@ -751,7 +751,7 @@ body.screen { background: var(--wl-fond); color: var(--wl-texte); }
     <span id="g-position" class="g-position" role="status" aria-live="polite"></span>
     <button id="g-next" class="btn" type="button">Suivant →</button>
   </div>
-  <span class="g-note">Données fictives · Les résultats de l'application sont affichés dès l'ouverture. Choisissez une forme, un état et un mode.</span>
+  <span class="g-note" id="g-note" role="status" aria-live="polite">Données fictives · Choisissez une forme, un état et un mode.</span>
 </div>
 <main class="screen-main" id="g-main">
   <p class="s-meta" id="g-meta"></p>
@@ -1421,7 +1421,7 @@ var WL = (function () {
 
 </script>
 <script>
-/* Galerie des résultats : les 12 formes, 4 états, 4 modes, avec les vraies fonctions de
+/* Galerie des résultats : les 12 formes, les états adaptés à chacune, 4 modes, avec les vraies fonctions de
  * rendu de l'application. Données fictives. Paramètres d'adresse : #type=poll&etat=reponses&mode=screen-dark */
 'use strict';
 (function () {
@@ -1465,6 +1465,19 @@ var WL = (function () {
   FORMS.forEach(function (f) { selType.appendChild(WL.el('option', { value: f.id }, f.label)); });
   STATES.forEach(function (s) { selState.appendChild(WL.el('option', { value: s[0] }, s[1])); });
   selState.value = 'reponses';
+  var correctionAvailable = true;
+
+  function selectState(form, requested) {
+    var canCorrect = Array.isArray(form.q.correct) && form.q.correct.length > 0;
+    var allowed = STATES.filter(function (s) { return s[0] !== 'corrige' || canCorrect; });
+    if (correctionAvailable !== canCorrect) {
+      WL.clear(selState);
+      allowed.forEach(function (s) { selState.appendChild(WL.el('option', { value: s[0] }, s[1])); });
+      correctionAvailable = canCorrect;
+    }
+    selState.value = allowed.some(function (s) { return s[0] === requested; }) ? requested : 'reponses';
+    return canCorrect;
+  }
 
   function fromHash() {
     var p = {}; location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
@@ -1472,27 +1485,30 @@ var WL = (function () {
       if (!a[0]) return;
       try { p[a[0]] = decodeURIComponent(a[1] || ''); } catch (error) { /* Une adresse mal encodée garde les valeurs par défaut. */ }
     });
-    if (p.type) selType.value = p.type; if (p.etat) selState.value = p.etat; if (p.mode) selMode.value = p.mode;
+    if (p.type) selType.value = p.type; if (p.mode) selMode.value = p.mode;
+    return p.etat || selState.value;
   }
 
-  function draw() {
+  function draw(requestedState) {
     var f = FORMS.filter(function (x) { return x.id === selType.value; })[0];
     if (!f) { f = FORMS[0]; selType.value = f.id; }
-    if (!STATES.some(function (s) { return s[0] === selState.value; })) selState.value = 'reponses';
+    var canCorrect = selectState(f, typeof requestedState === 'string' ? requestedState : selState.value);
     if (['screen-dark', 'screen-light', 'participant', 'admin'].indexOf(selMode.value) === -1) selMode.value = 'screen-dark';
     var position = FORMS.indexOf(f);
     $('g-position').textContent = (position + 1) + ' / ' + FORMS.length;
     $('g-previous').disabled = position === 0;
     $('g-next').disabled = position === FORMS.length - 1;
     var state = selState.value, mode = selMode.value;
+    $('g-note').textContent = 'Données fictives · ' + (canCorrect
+      ? (state === 'corrige' ? 'La coche ✓ indique la bonne réponse.' : 'Choisissez « Avec la bonne réponse » pour afficher la correction du quiz.')
+      : (f.q.type === 'points' ? 'Ce classement exprime les priorités du groupe. Il n’y a pas de bonne réponse.' : 'Ce format ne comporte pas de bonne réponse à révéler.'));
     var body = $('g-body'), out = $('g-out');
     body.className = (mode.indexOf('screen') === 0 ? 'screen' : mode) + ' mode-' + (mode.indexOf('screen') === 0 ? 'screen' : mode);
     document.documentElement.setAttribute('data-theme', mode === 'screen-dark' ? 'dark' : 'light');
     $('g-text').textContent = f.q.text;
     $('g-meta').textContent = 'Question 1 / 1 — ' + WL.typeLabel(f.q);
     var q = JSON.parse(JSON.stringify(f.q));
-    if (state !== 'corrige' && state !== 'masque') delete q.correct;
-    if (state === 'masque') delete q.correct;
+    if (state !== 'corrige') delete q.correct;
     WL.clear(out);
     out.className = '';
     if (state === 'masque') {
@@ -1522,9 +1538,9 @@ var WL = (function () {
       event.preventDefault(); navigate(event.key === 'ArrowRight' ? 1 : -1);
     }
   });
-  window.addEventListener('hashchange', function () { fromHash(); draw(); });
+  window.addEventListener('hashchange', function () { draw(fromHash()); });
   window.addEventListener('resize', draw);
-  fromHash(); draw();
+  draw(fromHash());
 }());
 
 </script>

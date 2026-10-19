@@ -87,4 +87,34 @@ test('Un lien incomplet ou invalide revient à un aperçu utilisable', () => {
   location.hash = 'type=%&etat=%&mode=%';
   assert.equal(last().q.type, 'yesno'); assert.equal(last().res.total, 12);
 });
+test('Le classement par points ne propose pas de bonne réponse', () => {
+  location.hash = 'type=points&etat=reponses&mode=screen-dark';
+  assert.equal(element('g-state').children.some(option => option.value === 'corrige'), false);
+  assert.match(element('g-note').textContent, /priorités du groupe/);
+  location.hash = 'type=points&etat=corrige&mode=screen-dark';
+  assert.equal(element('g-state').value, 'reponses');
+  assert.deepEqual(last().res.counts, [18, 52, 31, 19]);
+  assert(!('correct' in last().q));
+});
+test('Les formes sans correction gardent leurs résultats et leurs états utiles', () => {
+  for (const type of ['poll', 'scale', 'wordcloud', 'text', 'steps', 'points', 'wall', 'postit', 'dots']) {
+    location.hash = 'type=' + type + '&etat=corrige&mode=screen-light';
+    assert.deepEqual(element('g-state').children.map(option => option.value), ['vide', 'reponses', 'masque']);
+    assert.equal(element('g-state').value, 'reponses');
+    assert(last().res.total > 0); assert(!('correct' in last().q));
+  }
+});
+test('Un quiz révèle sa correction après une forme qui en est dépourvue', () => {
+  for (const type of ['yesno', 'mcq', 'mcqm']) {
+    location.hash = 'type=points&etat=reponses&mode=screen-dark';
+    location.hash = 'type=' + type + '&etat=corrige&mode=screen-dark';
+    assert.equal(element('g-state').value, 'corrige');
+    assert(last().q.correct.length > 0);
+    assert(element('g-state').children.some(option => option.value === 'corrige'));
+    assert.match(element('g-note').textContent, /coche/);
+    const corrected = last().res;
+    location.hash = 'type=' + type + '&etat=reponses&mode=screen-dark';
+    assert(!('correct' in last().q)); assert.deepEqual(last().res, corrected);
+  }
+});
 console.log('Galerie : ' + count + ' scénarios de commandes validés, sans navigateur.');

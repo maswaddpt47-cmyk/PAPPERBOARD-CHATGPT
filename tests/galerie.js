@@ -1,4 +1,5 @@
-// Galerie des résultats (docs/galerie-resultats) : 12 formes × 4 états × 4 modes × 4 tailles
+// Galerie : 12 formes × 4 états demandés × 4 modes × 4 tailles.
+// Une correction demandée hors quiz revient aux résultats sans correction.
 // avec les vraies fonctions de rendu. Échec si erreur JavaScript, débordement horizontal,
 // résultat vide, ou résultat hors de l'écran en projection (768 px et plus).
 // Lancé par tests/run.sh si Playwright est installé.
@@ -23,10 +24,14 @@ const SIZES = [[1440,900],[1024,768],[768,1024],[390,844]];
         const out = document.getElementById('g-out');
         const de = document.documentElement;
         const items = out.querySelectorAll('li, .note, .donut, .gauge, .cloud-word, .s-answered');
-        return { ov: de.scrollWidth - de.clientWidth, kids: out.children.length, txt: out.textContent.trim().length, bottom: Math.round(out.getBoundingClientRect().bottom), vh: innerHeight, items: items.length };
+        return { ov: de.scrollWidth - de.clientWidth, kids: out.children.length, txt: out.textContent.trim().length, bottom: Math.round(out.getBoundingClientRect().bottom), vh: innerHeight, items: items.length,
+          state: document.getElementById('g-state').value, correction: !!document.querySelector('#g-state option[value="corrige"]') };
       });
       n++;
       const screenMode = m.startsWith('screen');
+      const canCorrect = ['yesno', 'mcq', 'mcqm'].includes(t);
+      if (r.correction !== canCorrect) bad.push(`CORRECTION INADAPTÉE ${t}/${s}/${m}`);
+      if (r.state !== (s === 'corrige' && !canCorrect ? 'reponses' : s)) bad.push(`ÉTAT INCOHÉRENT ${t}/${s}/${m}`);
       if (r.ov > 0) bad.push(`DÉBORDEMENT ${t}/${s}/${m} ${w}px : +${r.ov}`);
       if (r.kids === 0 || r.txt === 0) bad.push(`VIDE ${t}/${s}/${m} ${w}px`);
       if (screenMode && w >= 768 && r.bottom > r.vh) bad.push(`HORS ÉCRAN ${t}/${s}/${m} ${w}x${h} : bas à ${r.bottom} > ${r.vh}`);

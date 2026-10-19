@@ -1,3 +1,7 @@
+## Galerie : correction réservée aux quiz — 19/10/2026
+
+**Mesuré** : le menu proposait une bonne réponse pour le classement par points, alors que ce format reflète les priorités du groupe. Échec reproduit par un test, puis corrigé : l’état `corrige` est proposé seulement aux formes avec une correction définie (Oui/Non, QCM simple et multiple dans la galerie). Les anciens liens demandant une correction hors quiz reviennent aux réponses ; une note explique le format. Les 11 scénarios de commandes passent sans navigateur. Aperçu autonome reconstruit ; les contrôles navigateur restent à effectuer. Aucun changement des règles de vote ni du serveur PHP.
+
 ## Consigne de suivi — 19/10/2026
 
 Consigne utilisateur : signaler immédiatement un blocage avec sa cause et les solutions possibles, borner les commandes et abandonner une méthode qui échoue. Protocole inscrit dans `AGENTS.md`, référencé par `CLAUDE.md`. Aucun changement de comportement de l’application.
