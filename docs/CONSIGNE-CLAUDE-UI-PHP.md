@@ -2,21 +2,35 @@
 
 ## Mission et références
 
-Consigne du 19/10/2026. Appliquer la présentation et les parcours retenus dans la
-simulation à l’application PHP réelle, en conservant ses fonctions et ses données.
-Livrer une intégration testable, puis suivre le processus de déploiement du dépôt.
+Consigne renforcée par l’utilisateur le 19/10/2026 : le site PHP doit reproduire
+fidèlement le rendu de la simulation. La simulation constitue la référence
+visuelle à reproduire ; elle ne sert pas seulement d’inspiration. Conserver
+les fonctions réelles et les données de l’application PHP.
+
+**Autorisation — instruction utilisateur du 19/10/2026 :** le feu vert explicite
+pour intégrer sur PAPPERBOARD et publier après vérification est reçu. Il remplace
+le gel précédent. Le chantier est lancé sur `codex/interface-simulation-fidele` ;
+actualiser son état dans PAPPERBOARD avant de commencer un travail concurrent.
 
 **État mesuré en lecture le 19/10/2026 :**
 
 - Application de production : `maswaddpt47-cmyk/PAPPERBOARD`, référence lue
-  `3be45e5fb232918b50face1d125fd68d990a2084`. Actualiser cette base avant de travailler.
+  base `98c91a61dac3782536ee2e804b543e5bd3135484` ; intégration en cours sur
+  `codex/interface-simulation-fidele`. Les preuves fichier:ligne plus bas désignent
+  la lecture historique de `3be45e5fb232918b50face1d125fd68d990a2084`, pas les lignes
+  du chantier en cours. Actualiser la branche avant toute intervention.
 - Référence d’interface : `maswaddpt47-cmyk/PAPPERBOARD-CHATGPT`, référence
-  `57add977d200f21e1f9bdfb08370b0b2ad4f0d78`.
-- [Simulation à consulter](https://maswaddpt47-cmyk.github.io/PAPPERBOARD-CHATGPT/simulation.html?v=57add97).
-- [Sources de la simulation à cette référence](https://github.com/maswaddpt47-cmyk/PAPPERBOARD-CHATGPT/tree/57add977d200f21e1f9bdfb08370b0b2ad4f0d78/docs/simulation).
-- La simulation a passé 674 contrôles Chrome sur cette référence : questions,
-  douze formes, quatre tailles, QR, niveaux, durée et public personnalisé.
-  Ce résultat concerne la simulation ; il ne prouve pas l’intégration PHP.
+  `7a80fc3a81083f3cb8adf4dfc5e79e686e9fb5bb`.
+- [Simulation à consulter](https://maswaddpt47-cmyk.github.io/PAPPERBOARD-CHATGPT/simulation.html?v=7a80fc3).
+- [Sources de la simulation à cette référence](https://github.com/maswaddpt47-cmyk/PAPPERBOARD-CHATGPT/tree/7a80fc3a81083f3cb8adf4dfc5e79e686e9fb5bb/docs/simulation).
+- Les empreintes des sources et du fichier autonome sont fournies dans
+  `docs/simulation/reference-ui.json` au même commit. Vérifier ces empreintes
+  avant la transposition. Un paramètre `?v=` sur GitHub Pages force le
+  rafraîchissement mais ne fige pas le contenu : pour la référence historique,
+  lire les sources au commit indiqué, puis ouvrir son fichier autonome.
+- Mesuré le 19/10/2026 : les 769 contrôles Chrome de cette référence passent
+  dans GitHub Actions (exécution `39252873063`), ainsi que la suite PHP de la copie
+  (`39252873015`). Ils concernent la simulation et ne prouvent pas l’intégration PHP.
 
 Ces constats sont datés ; les sections suivantes sont des exigences à exécuter.
 La simulation utilise des données fictives. La production doit garder son API PHP,
@@ -31,8 +45,9 @@ ses sessions serveur, ses inscriptions réelles et sa synchronisation entre appa
 3. Examiner `admin.php`, `index.php`, `screen.php`, `assets/style.css`,
    `assets/admin.js`, `assets/app.js`, `assets/screen.js`, `assets/common.js`,
    `assets/charts.js`, les exports, puis les contrats d’`api.php` et `lib.php`.
-4. Examiner dans la copie : `docs/simulation/index.html`, `charte.css`, `app.js`,
-   `preparation-tools.js`, `qa-navigateur.cjs`, ainsi que la galerie des résultats.
+4. Examiner dans la copie : `docs/simulation/index.html`, `style.css`,
+   `refinements.css`, `jetons.css`, `charte.css`, `app.js`, `preparation-tools.js`,
+   `tooltips.js`, `reference-ui.json`, `qa-navigateur.cjs` et la galerie des résultats.
 5. Rendre un tableau bref : **fonction / preuve PHP fichier:ligne / référence
    de simulation / écart / action prévue**. Inclure les fonctions déjà présentes,
    même si elles sont absentes du prototype. Ne pas refaire un audit déjà acquis
@@ -43,33 +58,71 @@ solution proposée. Écrire « manquant » pour une valeur ou pièce réellement
 Continuer les travaux indépendants. Les références de code ci-dessus permettent
 de travailler sans attendre d’anciennes captures ou une archive de sandbox.
 
-## 2. Référence graphique et limites de transposition
+## 2. Fidélité visuelle obligatoire
 
-- Garder la charte « Papier & Terre » : interface claire ivoire/terracotta,
-  projection sombre pétrole, projection claire, titres Georgia et texte Verdana.
-  Utiliser les jetons `--wl-*` et les composants existants ; aucune police distante.
-- La source des couleurs est `assets/style.css`, avec ses rôles par thème.
-  Vérifier les couleurs effectivement calculées, y compris sur les pistes des graphes,
-  les cartes, les états désactivés et les exports. Ne pas mesurer une capture pour
-  remplacer une valeur déjà définie dans le code.
-- **Point ouvert mesuré le 19/10/2026 :** AG-006 est tranché dans la production ;
-  AG-007 reste ouvert dans `PAPPERBOARD-CHATGPT/AGORA.md`. Il propose des variantes
-  de contraste en clair, notamment moutarde `#8A6500` contre `#B18400` en production.
-  Ne pas présenter ces variantes d’essai comme déjà validées en production.
-  Vérifier l’état actuel de ce bloc et appliquer la procédure du dépôt ; poursuivre
-  les autres adaptations indépendantes de cet arbitrage.
-- Reprendre les espacements, cartes, hiérarchie, navigation et états du prototype
-  en les adaptant aux gabarits PHP et aux composants réels. Préserver les identifiants
-  utilisés par le JS, l’accessibilité et les tests, ou adapter leurs usages ensemble.
-- Conserver la CSP du site et les ressources locales. Le HTML autonome et ses
-  scripts intégrés servent de référence visuelle ; leur politique `unsafe-inline`
-  ne doit pas être transposée à la production.
+Exigence utilisateur du 19/10/2026. Une interface qui reprend uniquement les
+couleurs ne satisfait pas la demande. Ne pas recomposer le prototype avec les
+anciens gabarits PHP : reprendre sa structure visuelle et ses composants, puis
+brancher les données et actions réelles sur cette présentation. Les anciennes
+formulations permissives (« adapter la présentation », « reprendre l’esprit »)
+ne doivent pas être utilisées pour modifier le rendu cible.
+
+| Zone de référence | Éléments à reproduire |
+|---|---|
+| Coque | Largeur et comportement de la navigation latérale, marque, fil d’Ariane, marges du contenu, largeur utile sur PC et tiroir mobile. |
+| Typographie | Georgia pour les titres, Verdana pour les textes, tailles calculées, graisses, interlignages et césures aux mêmes largeurs. |
+| Composants | Cartes, fonds, bordures, ombres, rayons, champs, boutons, icônes, badges et états désactivés, actifs et au focus. |
+| Navigation | Vues et regroupements du prototype ; Préparer, Pilotage, Animer, Bilan et Réglages dans l’atelier. Conserver les archives dans une présentation cohérente avec Mes ateliers. |
+| Animation | Liste des questions, navigation au-dessus du contenu, zone centrale, cartes de participation et d’échanges, position et dimensions des commandes. |
+| Fenêtres | Dimensions, espacements, en-têtes et pieds des formulaires ; QR agrandi, aperçu participant, création et import JSON. |
+| Projection | Même hiérarchie, mêmes cartes de réponses, palette calculée, légendes, commandes en haut et ajustement au viewport. |
+| Aides | Info-bulles explicatives au survol et au focus, association au contrôle, fermeture par Échap, lisibles dans les dialogues et la projection. |
+
+- Lire les styles dans leur ordre réel : `style.css`, `refinements.css`,
+  `jetons.css`, `charte.css`. Copier une seule de ces feuilles ne reproduit
+  pas leur cascade. Les valeurs de référence viennent du code et des styles
+  calculés dans un navigateur, pas d’une estimation d’après une capture.
+- Utiliser la version figée indiquée au début et ses empreintes. Le prototype
+  évoluant, ne pas mélanger ses versions. Les anciens arbitrages de palette
+  doivent être rapprochés de la demande actuelle ; signaler un conflit précis
+  avant de changer les valeurs, sans produire silencieusement une troisième palette.
+- Garder les décisions de production sur la sécurité et les données. Remplacer
+  les données et mentions de simulation par leur équivalent réel. Afficher la
+  vraie date de purge en PHP ; réserver réponses et inscriptions fictives aux
+  sessions de démonstration. Les nombres de participants et textes différents
+  ne justifient pas de modifier le dessin des composants.
+- Adapter les appels PHP/JS et les identifiants nécessaires sans changer le
+  rendu demandé. Mettre à jour les tests si un identifiant change. Le fichier
+  autonome contient des scripts et styles intégrés : les séparer dans les
+  ressources locales du site en respectant sa CSP, sans ajouter `unsafe-inline`.
+- Une fonction PHP absente du prototype reste disponible. L’intégrer avec les
+  composants de la référence : ne pas la supprimer pour rendre deux captures
+  identiques. Garder notamment relecture JSON, purge, démos, modération et exports.
+
+### Comparaison exigée avant de déclarer le rendu conforme
+
+1. Ouvrir la simulation figée et la branche PHP à **la même taille de viewport**
+   et dans le même navigateur : 1920×1080, 1280×720, 1024×768 et 390×844.
+2. Utiliser des données fictives équivalentes, les mêmes états de vote et de
+   publication, la même question et la même longueur de texte. Attendre les
+   polices et neutraliser les animations uniquement dans la comparaison.
+3. Capturer Mes ateliers, Préparer, Pilotage, Animer, Bilan, Réglages, création
+   JSON avec aperçu, aperçu participant, projection et QR agrandi. Comparer
+   côte à côte et en superposition, y compris les états masqué et publié.
+4. Relever les styles calculés et dimensions : navigation, marges, titres,
+   cartes, boutons, colonnes, modales et réponses. Corriger les écarts de
+   structure et d’espacement, pas seulement les couleurs. Ne pas masquer un
+   décalage derrière un seuil global de différence d’image.
+5. Fournir les captures et une liste des écarts restants, chacun expliqué.
+   Une CI fonctionnelle verte ne suffit pas à déclarer le rendu identique.
+   Toute divergence visuelle volontaire attend une décision de l’utilisateur.
 
 ## 3. Parcours à intégrer et fonctions à préserver
 
 | Zone | Résultat attendu |
 |---|---|
 | Mes ateliers | Créer, ouvrir, renommer, dupliquer, archiver/restaurer et supprimer. Renommer conserve les questions, les réponses et l’identité de l’atelier, et actualise son titre sur les écrans. Utiliser les opérations serveur, leurs confirmations et leurs règles d’archivage anonyme. Une copie repart avec de nouveaux identifiants et sans votes. |
+| Démonstrations et entretien | Garder « Créer une session de démonstration », « Supprimer la démo » / suppression groupée et le statut du dernier passage réel de la purge horaire dans Réglages. Utiliser les opérations serveur existantes et préserver les autres ateliers. |
 | Bibliothèque et archives | Distinguer les modèles pédagogiques des ateliers actifs et des archives. Préserver les thèmes personnels, séances, historiques et bilans déjà présents. |
 | Atelier | Préparer → Pilotage → Animer → Bilan. Changer d’onglet conserve la question, les réponses et l’état réel de la session. |
 | Pilotage | QR/code/lien réels, copier/partager, inscriptions ouvertes/fermées, participants, visibilité du QR, accueil, signaux et acquittement, Oser demander et modération, pseudonymes et podium. Ajouter « Terminer la session » avec la confirmation existante, puis « Rouvrir la session » ; réutiliser l’action serveur déjà présente dans Réglages/Animer. |
@@ -160,8 +213,10 @@ conservé dans la production, et ne doit pas disparaître lors de la reprise de 
 ## 4. Exécution et vérifications, étape par étape
 
 1. **Audit** : tableau des écarts, base Git, décisions connues, tests de départ.
-2. **Structure et charte** : navigation, cartes, boutons, champs, thèmes et focus.
-   Faire un commit logique et vérifier les écrans avant d’étendre les modifications.
+2. **Structure et charte identiques à la référence** : reprendre la coque, la
+   hiérarchie et les composants, puis vérifier les dimensions et styles calculés
+   à viewport égal. Faire un commit logique et une comparaison visuelle avant
+   d’étendre les modifications ; ne pas se limiter à une recoloration.
 3. **Parcours** : création/import/relecture, Pilotage, Animer, participant, Bilan.
    Brancher chaque contrôle sur son opération réelle ; garder le fonctionnement
    et les messages d’erreur existants quand la présentation change.
@@ -194,8 +249,11 @@ tester sans accès administratif Alwaysdata lorsque le dépôt et la CI suffisen
 ## Prompt court à donner à Claude
 
 > Travaille dans `maswaddpt47-cmyk/PAPPERBOARD`. Actualise le dépôt et lis les règles
-> locales, puis cette consigne complète. Applique-la étape par étape à l’application
-> PHP réelle à partir des références indiquées. Commence par l’audit des écarts,
+> locales, puis cette consigne complète. Le feu vert explicite du 19/10/2026 est
+> reçu ; coordonne-toi avec le chantier déjà ouvert dans PAPPERBOARD. Reproduis fidèlement l’interface
+> de la simulation au commit figé indiqué, avec sa structure, ses dimensions et
+> ses composants ; branche les fonctions PHP réelles et compare les deux rendus
+> aux mêmes tailles de viewport. Commence par l’audit des écarts,
 > puis poursuis l’intégration autorisée avec un commit par étape vérifiée. Préserve
 > toutes les fonctions existantes, en particulier la relecture du JSON par une autre
 > IA et la validation avant ajout. N’invente aucune valeur ou pièce manquante.
