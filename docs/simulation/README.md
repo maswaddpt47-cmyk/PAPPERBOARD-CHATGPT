@@ -6,6 +6,11 @@ jetons de la charte dans `assets/style.css` par `scripts/packager-simulation.py`
 Ouvrir `simulation.html` à la racine du dépôt, ou sa version GitHub Pages.
 Cliquer sur **Créer un atelier** dans le bandeau en haut, donner un nom, puis
 choisir **Partir d’un atelier vide** ou **Générer ou importer un JSON**.
+19/10/2026 — mesuré dans le code : **Public → Autres** affiche un champ libre
+**Précisez le public**, repris dans la consigne pour l’IA (160 caractères maximum).
+Un texte vide est signalé avant copie ; choisir un public prédéfini masque le
+champ et utilise ce public. La saisie reste disponible si l’on revient à Autres
+dans la même fenêtre de préparation.
 19/10/2026 — mesuré : la génération propose un menu **Niveau du public**,
 distinct du type de public : **Groupe hétérogène** (par défaut), **Découverte**,
 **Débutant**, **Intermédiaire**, **Avancé**. Le choix et ses consignes pédagogiques

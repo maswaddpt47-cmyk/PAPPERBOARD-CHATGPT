@@ -59,6 +59,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .planning-options .check-line { margin: 0; }
 .generator-planning-values > [hidden] { display: none; }
 .generator-planning-values .input { max-width: 16rem; }
+.custom-audience { display: grid; gap: .5rem; margin-top: .5rem; }
+.custom-audience[hidden] { display: none; }
 .live-session-summary { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; padding: .8rem 1rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
 .live-session-summary > div { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; flex: 1; color: var(--muted); font-size: .75rem; }
 .live-session-summary span { display: inline-flex; align-items: center; gap: .4rem; }
