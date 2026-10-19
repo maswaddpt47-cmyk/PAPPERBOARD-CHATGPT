@@ -1,0 +1,710 @@
+/* WoocLight — feuille unique pour les trois écrans et la version imprimable.
+ * Charte « Papier & Terre » v2 (palette validée le 18/10/2026 comme base provisoire,
+ * branche test/nouvelle-charte) : ivoire, terracotta, bleu pétrole pour la projection.
+ * Aucune couleur ni logo d'une institution.
+ * Trois niveaux de jetons : primitifs (--wl-c-*, valeurs brutes, jamais utilisés par un
+ * composant) > rôles (--wl-fond, --wl-texte, --wl-primaire…, redéfinis par thème) >
+ * composants (--wl-b1…b7 séries, --wl-postit-*). Une couleur ne s'écrit qu'ici.
+ * Contrastes mesurés le 18/10/2026 (formule WCAG, script de la session) :
+ *  clair  — texte/ivoire 13,9:1 · texte doux/ivoire 4,6:1 · blanc/primaire 5,5:1 · ok/ivoire 4,5:1
+ *           ko/ivoire 5,8:1 · bord de champ/ivoire 3,7:1 · séries b1…b7 de 3,0:1 à 6,5:1 sur ivoire
+ *           Variantes de graphes corrigées le 19/10/2026 dans la copie d'essai :
+ *           moutarde/trace 3,63:1 ; neutre/trace 3,54:1 (tests/contrastes.js).
+ *  projection sombre — ivoire/pétrole 11,2:1 · ivoire/carte 8,9:1 · séries 4,5:1 mini sur la carte
+ *           bouton primaire 5,7:1 · ok 5,5:1 · ko 4,9:1 · focus 6,3:1 */
+
+:root {
+  /* Niveau 1 — primitifs */
+  --wl-c-ivoire: #F7F0E4;  --wl-c-carte: #FFFDF8;  --wl-c-blanc: #FFFFFF;
+  --wl-c-brun: #28221E;    --wl-c-brun-doux: #7A6A5C;  --wl-c-brun-bord: #8A7A6A;
+  --wl-c-terracotta: #B74322;  --wl-c-terracotta-fonce: #A33C1E;
+  --wl-c-petrole: #10383C; --wl-c-petrole-carte: #15494E;
+  --wl-c-vert: #3D7D3D;    --wl-c-moutarde: #C99600;   --wl-c-prune: #943D78;
+
+  /* Niveau 2 — rôles, thème clair (ivoire / terracotta) */
+  --wl-primaire: var(--wl-c-terracotta);   /* boutons, liens, bandeau */
+  --wl-primaire-fonce: var(--wl-c-terracotta-fonce);
+  --wl-primaire-clair: #FBEBE1;  /* survol ; primaire dessus 4,7:1 */
+  --wl-primaire-pale: #FDF0E8;   /* choix coché ; primaire dessus 4,9:1 */
+  --wl-sur-primaire: var(--wl-c-blanc);    /* texte posé sur un fond primaire */
+  --wl-accent: #1F6F6B;          /* compte à rebours, état du vote */
+  --wl-texte: var(--wl-c-brun);
+  --wl-texte-doux: var(--wl-c-brun-doux);
+  --wl-fond: var(--wl-c-ivoire);
+  --wl-carte: var(--wl-c-carte);
+  --wl-bord: #E4D3BA;            /* filets décoratifs, jamais seul pour un champ */
+  --wl-champ: var(--wl-c-brun-bord);  /* bord des champs et des cases (3,7:1) */
+  --wl-champ-fond: var(--wl-c-carte);
+  --wl-trace: #E4D3BA;           /* fond des anneaux, jauge, colonnes, progression : visible aussi sur le fond ivoire */
+  --wl-piste: var(--wl-c-ivoire);  /* fond des barres ; les tracés SVG utilisent --wl-trace */
+  --wl-ok: #3C7B3C;
+  --wl-ok-fond: #EAF3E5;         /* ok dessus 4,5:1 */
+  --wl-ko: #B3261E;
+  --wl-focus: #1F6F6B;
+  --wl-barre: var(--wl-primaire);
+  --wl-barre-ok: var(--wl-ok);
+  /* Une couleur par réponse (la bonne réponse porte --wl-barre-ok + coche + mention).
+     b1 terracotta, b2 vert, b3 moutarde foncée, b4 prune : les quatre couleurs de la charte. */
+  --wl-b1: var(--wl-c-terracotta); --wl-b2: var(--wl-c-vert); --wl-b3: #8A6500; --wl-b4: var(--wl-c-prune);
+  --wl-b5: #1F6F6B; --wl-b6: #2F5E9E; --wl-b7: var(--wl-c-brun-doux);
+  --wl-pastille: var(--wl-b3);
+  --wl-pastille-bord: #7A4F00;
+  --wl-alerte-fond: #FFF4D6; --wl-alerte-bord: #8A6100; --wl-alerte-texte: #4D3600;
+  --wl-moutarde: #E0A22B;        /* anneau « tout le monde a répondu » (décoratif) */
+  /* Post-its : fond clair et texte foncé dans tous les thèmes (contraste ≥ 12:1). */
+  --wl-postit-texte: var(--wl-c-brun);
+  --wl-postit-0: #FFF1A8; --wl-postit-1: #D6EEF6; --wl-postit-2: #EEF3C9;
+  --wl-postit-3: #F9DCC8; --wl-postit-4: #F3DDEB; --wl-postit-5: #E4EEDB;
+  --wl-postit-sub: #4D3600;
+  /* Le QR code reste noir sur blanc pur dans tous les thèmes (lecture par l'appareil photo). */
+  --wl-qr-fond: var(--wl-c-blanc);
+
+  --wl-police: Verdana, Geneva, "DejaVu Sans", sans-serif;
+  --wl-police-titre: Georgia, "Times New Roman", serif;
+  --wl-esp-1: .25rem; --wl-esp-2: .5rem; --wl-esp-3: .75rem; --wl-esp-4: 1rem; --wl-esp-5: 1.5rem; --wl-esp-6: 2rem;
+  --wl-rayon-xs: 4px; --wl-rayon-s: 8px; --wl-rayon: 14px; --wl-rayon-pilule: 999px;
+  --wl-cible: 3rem; /* 48 px minimum pour toute cible tactile */
+  --wl-bord-fin: 1px solid var(--wl-bord);
+  --wl-ombre-couleur: rgba(80, 40, 10, .12);
+  --wl-ombre: 0 2px 0 var(--wl-bord), 0 8px 18px var(--wl-ombre-couleur);
+  --wl-ombre-note: 0 2px 4px rgba(0, 0, 0, .25);
+  --wl-voile: rgba(40, 34, 30, .62);
+  --wl-sortie: cubic-bezier(.2, .8, .2, 1);
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; } /* 18 px : lisible pour tous */
+
+body {
+  margin: 0;
+  font-family: var(--wl-police);
+  line-height: 1.5;
+  color: var(--wl-texte);
+  background: var(--wl-fond);
+}
+
+h1, h2, h3, .brand, .code-big, .q-text, .s-text, .big { font-family: var(--wl-police-titre); }
+h1 { font-size: 1.5rem; line-height: 1.3; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; margin: 0 0 var(--wl-esp-3); }
+h2 + .meta { margin-top: calc(-1 * var(--wl-esp-1)); margin-bottom: var(--wl-esp-3); } /* sous-titre collé à son titre */
+a { color: var(--wl-primaire); }
+a:hover { color: var(--wl-primaire-fonce); }
+[hidden] { display: none !important; }
+
+:focus-visible { outline: 3px solid var(--wl-focus); outline-offset: 2px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* --- Structure ------------------------------------------------------------ */
+
+.topbar {
+  display: flex; align-items: center; gap: var(--wl-esp-4); flex-wrap: wrap;
+  padding: .6rem var(--wl-esp-4); background: var(--wl-primaire); color: var(--wl-sur-primaire);
+  border-bottom: 3px solid var(--wl-primaire-fonce);
+}
+.admin .topbar { border-bottom-color: var(--wl-c-petrole); }
+.participant .topbar { border-bottom-color: var(--wl-b3); }
+.brand { font-weight: bold; font-size: 1.25rem; letter-spacing: .01em; }
+.topbar-title { flex: 1; min-width: 8rem; font-size: .95rem; overflow-wrap: anywhere; }
+.topbar .btn-ghost { color: var(--wl-sur-primaire); border-color: var(--wl-sur-primaire); }
+.topbar .btn-ghost:hover { background: var(--wl-primaire-fonce); }
+.size-tools { display: flex; gap: .4rem; }
+.btn-size { min-width: 2.75rem; padding: .3rem .5rem; font-weight: bold; }
+/* Taille du texte réglée par le participant (A− / A+), réglage gardé sur son téléphone. */
+html[data-size="1"] { font-size: 125%; }
+html[data-size="2"] { font-size: 140%; }
+
+main { max-width: 64rem; margin: 0 auto; padding: 1rem; }
+.participant main { max-width: 34rem; }
+
+.card {
+  background: var(--wl-carte); border: var(--wl-bord-fin); border-radius: var(--wl-rayon); box-shadow: var(--wl-ombre);
+  padding: 1.25rem; margin-bottom: var(--wl-esp-4);
+}
+/* Changement d'écran participant : fondu court quand une carte devient visible. */
+.participant .card:not([hidden]) { animation: wl-fade .25s ease-out; }
+.narrow { max-width: 26rem; margin: 2rem auto; }
+.center { text-align: center; }
+.big { font-size: 1.3rem; font-weight: bold; }
+.meta { color: var(--wl-texte-doux); font-size: .9rem; margin: .25rem 0; }
+.error { color: var(--wl-ko); font-weight: bold; min-height: 1.5em; margin: .5rem 0; }
+.ok { color: var(--wl-ok); }
+.ko { color: var(--wl-ko); }
+.break { overflow-wrap: anywhere; }
+
+/* États : un symbole accompagne toujours la couleur (jamais la couleur seule). Les symboles sont
+   dans ::before, donc hors du texte lu par les tests et copié par l'utilisateur. */
+.banner::before { content: "ℹ "; }
+.error:not(:empty)::before { content: "⚠ "; }
+.join-info::before, .answer-status:not(:empty)::before { content: "✓ "; }
+/* État vide (« Aucune session », « Aucune question… ») : cadre en pointillés, pas un simple texte gris. */
+li.meta { list-style: none; margin: 0; padding: var(--wl-esp-4); text-align: center;
+  border: 2px dashed var(--wl-bord); border-radius: var(--wl-rayon); }
+/* Attente : un point qui respire au-dessus du message (désactivé par prefers-reduced-motion). */
+#wait .big::before { content: ""; display: block; width: .9rem; height: .9rem; margin: 0 auto var(--wl-esp-3);
+  border-radius: 50%; background: var(--wl-accent); animation: wl-respire 2.4s ease-in-out infinite; }
+
+.banner {
+  background: var(--wl-alerte-fond); border: 2px solid var(--wl-alerte-bord); color: var(--wl-alerte-texte);
+  border-radius: var(--wl-rayon); padding: .75rem 1rem; margin-bottom: 1rem; font-weight: bold;
+}
+
+.row { display: flex; gap: var(--wl-esp-2); align-items: center; }
+.wrap { flex-wrap: wrap; }
+.grow { flex: 1; min-width: 12rem; }
+.grid2 { display: grid; gap: var(--wl-esp-4); }
+@media (min-width: 52rem) { .grid2 { grid-template-columns: 1fr 1.4fr; } }
+
+.footer { max-width: 34rem; margin: 1rem auto 2rem; padding: 0 1rem; font-size: .85rem; color: var(--wl-texte-doux); }
+/* Aligné sur le texte des cartes : marge de main + marge intérieure de .card. */
+.participant .footer { padding: 0 2.25rem; }
+summary { cursor: pointer; min-height: var(--wl-cible); display: flex; align-items: center; } /* cible tactile de 48 px pour tous les « détails » */
+#ed-url { display: inline-flex; align-items: center; min-height: var(--wl-cible); }
+
+/* --- Formulaires et boutons ------------------------------------------------ */
+
+label { display: block; font-weight: bold; margin: .75rem 0 .35rem; }
+input, select, textarea {
+  font: inherit; color: inherit; width: 100%; min-height: var(--wl-cible);
+  padding: .5rem .75rem; border: 2px solid var(--wl-champ); border-radius: var(--wl-rayon); background: var(--wl-champ-fond);
+}
+input, select, textarea { transition: border-color .15s ease-out; }
+input::placeholder, textarea::placeholder { color: var(--wl-texte-doux); opacity: 1; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--wl-focus); }
+input:disabled, select:disabled, textarea:disabled { background: var(--wl-piste); color: var(--wl-texte-doux); border-color: var(--wl-bord); cursor: not-allowed; }
+input[type="checkbox"], input[type="radio"] { width: 1.5rem; height: 1.5rem; min-height: 0; margin: 0; accent-color: var(--wl-primaire); }
+.check { display: flex; gap: .6rem; align-items: center; font-weight: normal; min-height: var(--wl-cible); }
+fieldset { border: 1px solid var(--wl-bord); border-radius: var(--wl-rayon); margin: .75rem 0; padding: .5rem 1rem; }
+legend { font-weight: bold; padding: 0 .25rem; }
+
+.input-code { font-family: var(--wl-police-titre); font-size: 2rem; letter-spacing: .35em; text-transform: uppercase; text-align: center; font-weight: bold; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+  min-height: var(--wl-cible); min-width: var(--wl-cible); padding: .5rem 1rem;
+  font: inherit; font-weight: bold; text-decoration: none; cursor: pointer;
+  color: var(--wl-primaire); background: var(--wl-carte);
+  border: 2px solid var(--wl-primaire); border-radius: var(--wl-rayon);
+  transition: transform .1s ease-out, background-color .15s ease-out;
+}
+.btn:hover { background: var(--wl-primaire-clair); color: var(--wl-primaire); }
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .65; border-style: dashed; cursor: not-allowed; } /* pointillés : l'état ne tient pas à l'opacité seule */
+.btn-primary { color: var(--wl-sur-primaire); background: var(--wl-primaire); }
+.btn-primary:hover { color: var(--wl-sur-primaire); background: var(--wl-primaire-fonce); border-color: var(--wl-primaire-fonce); }
+.btn-danger { color: var(--wl-ko); border-color: var(--wl-ko); }
+.btn-danger:hover { color: var(--wl-ko); background: var(--wl-alerte-fond); }
+.btn-ghost { background: transparent; }
+.btn-small { min-width: var(--wl-cible); padding: .25rem .6rem; }
+.btn-block { width: 100%; margin-top: .75rem; }
+
+/* --- Participant ------------------------------------------------------------ */
+
+.q-text { font-size: 1.45rem; }
+.timer { font-size: 1.2rem; font-weight: bold; color: var(--wl-accent); }
+.choices { display: grid; gap: var(--wl-esp-3); }
+.choices-2 { grid-template-columns: 1fr 1fr; }
+.choices-scale { grid-template-columns: repeat(5, 1fr); } /* 10 notes : deux rangées */
+.btn-choice { min-height: 4rem; font-size: 1.2rem; padding: .75rem; white-space: normal; }
+.choices-2 .btn-choice { min-height: 6rem; font-size: 1.5rem; font-family: var(--wl-police-titre); }
+.choices-scale .btn-choice { font-family: var(--wl-police-titre); font-size: 1.5rem; }
+/* Choix sélectionné : brun neutre (13:1), ni rouge (lu « faux ») ni vert (réservé à la bonne réponse). */
+.btn-choice[aria-pressed="true"] { color: var(--wl-fond); background: var(--wl-texte); border-color: var(--wl-texte); }
+.btn-choice[aria-pressed="true"]::before { content: "✓"; }
+.btn-choice:disabled[aria-pressed="true"] { opacity: 1; border-style: solid; }
+/* Correction : contour vert foncé (6,4:1) + mention écrite, pas la couleur seule. */
+.is-correct { border: 4px solid var(--wl-ok) !important; opacity: 1 !important; }
+.is-correct::after { content: "Bonne réponse"; display: block; font-size: .8rem; }
+.btn-choice.is-correct::after { width: 100%; }
+.btn-choice.is-correct { flex-wrap: wrap; }
+.check-big.is-correct { border-radius: var(--wl-rayon); padding: 0 .5rem; flex-wrap: wrap; }
+.check-big.is-correct::after { content: "✓ Bonne réponse"; color: var(--wl-ok); font-weight: bold; }
+.check-big:has(input:checked) { font-weight: bold; }
+.scale-legend { display: flex; justify-content: space-between; color: var(--wl-texte-doux); }
+.checks { padding: .25rem .75rem; }
+.check-big input { flex-shrink: 0; }
+.check-big {
+  display: flex; gap: var(--wl-esp-3); align-items: center; font-weight: normal; min-height: 3.5rem; font-size: 1.15rem;
+  background: var(--wl-carte); border: 2px solid var(--wl-champ); border-radius: var(--wl-rayon);
+  padding: .4rem .75rem; margin-bottom: .5rem;
+}
+.check-big:has(input:checked) { background: var(--wl-primaire-pale); border-color: var(--wl-primaire); }
+.points-left { font-weight: bold; font-size: 1.15rem; color: var(--wl-accent); }
+.points-row { display: flex; align-items: center; gap: var(--wl-esp-2); margin: .5rem 0; }
+.points-label { flex: 1; font-weight: bold; }
+.points-value { min-width: 2.5rem; text-align: center; font-family: var(--wl-police-titre); font-size: 1.4rem; font-weight: bold; }
+.btn-step { font-size: 1.5rem; padding: 0; font-family: var(--wl-police-titre); }
+.send-bar { margin-top: 1rem; }
+.send-bar .error { min-height: 0; margin: .25rem 0; }
+.send-hint { margin: 0 0 .5rem; color: var(--wl-texte-doux); font-size: .95rem; }
+/* Participant sur grand écran (PC, tablette à l'horizontale) : page plus large,
+   texte plus grand, 4 choix ou plus sur deux colonnes. Téléphone inchangé. */
+@media (min-width: 900px) {
+  .participant main, .participant .footer { max-width: 64rem; }
+  .participant .q-text { font-size: 1.8rem; }
+  .participant .btn-choice { font-size: 1.35rem; }
+  .participant .check-big { font-size: 1.3rem; }
+  .participant .choices:has(> :nth-child(4)):not(.choices-scale) { grid-template-columns: 1fr 1fr; }
+  .participant .checks:has(> label:nth-of-type(4)) { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--wl-esp-4); }
+}
+/* Écran large : « Envoyer » à droite des choix, jamais sous le pli ni par-dessus eux. */
+@media (min-width: 700px) {
+  #answer-form:has(> .choices, > .checks) { display: grid; grid-template-columns: 1fr 14rem; gap: 0 1.25rem; align-items: start; }
+  #answer-form:has(> .choices, > .checks) > .send-bar { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; position: sticky; top: 1rem; }
+}
+.explain { border-left: 4px solid var(--wl-primaire); padding: .5rem .75rem; background: var(--wl-carte); border-radius: 0 var(--wl-rayon) var(--wl-rayon) 0; margin: .75rem 0 0; }
+.join-info { font-weight: bold; color: var(--wl-ok); background: var(--wl-ok-fond); border-left: 4px solid var(--wl-ok); padding: .6rem .8rem; margin: 0 0 1rem; border-radius: 0 var(--wl-rayon) var(--wl-rayon) 0; }
+.answer-status { font-weight: bold; color: var(--wl-ok); min-height: 1.5em; }
+.my-result { border-top: 2px solid var(--wl-bord); margin-top: 1rem; padding-top: 1rem; }
+
+/* Signaler une difficulté, Oser demander, pseudonyme (téléphone). */
+.signal-title { font-size: 1.05rem; margin: 0 0 .6rem; }
+.signal-btns { display: grid; grid-template-columns: 1fr; gap: var(--wl-esp-2); } /* téléphone : un bouton par ligne, rien ne déborde */
+@media (min-width: 600px) { .signal-btns { grid-template-columns: repeat(3, 1fr); } }
+.btn-signal { white-space: normal; font-size: .95rem; padding: .5rem .3rem; min-height: 3.5rem; }
+.btn-signal[aria-pressed="true"] { color: var(--wl-fond); background: var(--wl-texte); border-color: var(--wl-texte); }
+.ask-form { display: flex; gap: var(--wl-esp-2); }
+.ask-form input { flex: 1; min-width: 0; }
+.ask-list { list-style: none; margin: .75rem 0 0; padding: 0; display: grid; gap: var(--wl-esp-2); }
+.ask-item { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .6rem .75rem;
+  background: var(--wl-carte); border: 1px solid var(--wl-bord); border-radius: var(--wl-rayon); }
+.ask-text { flex: 1 1 12rem; font-weight: bold; }
+.ask-item.is-answered { opacity: .75; }
+.ask-item.is-pending { border-style: dashed; border-color: var(--wl-champ); }
+.ask-done { color: var(--wl-ok); font-weight: bold; }
+.me-card { text-align: center; }
+.pseudo-line { font-family: var(--wl-police-titre); font-size: 1.4rem; font-weight: bold; color: var(--wl-primaire); margin: 0; }
+
+/* --- Résultats (projection, animateur, participant) ------------------------ */
+
+.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.bar { display: grid; grid-template-columns: minmax(6rem, 30%) 1fr auto; gap: var(--wl-esp-3); align-items: center; }
+.bar-label { overflow-wrap: break-word; }
+.bar-track { display: block; height: 1.6em; background: var(--wl-piste); border-radius: var(--wl-rayon-pilule); overflow: hidden; box-shadow: inset 0 0 0 1px var(--wl-champ); } /* le contour montre où finit la barre à 100 % */
+.bar-fill { display: block; height: 100%; width: 0; background: var(--wl-barre); border-radius: var(--wl-rayon-pilule); transition: width .9s var(--wl-sortie), height .9s var(--wl-sortie); }
+.bars:not(.bars-scale) > .bar:nth-child(7n+1) .bar-fill { background: var(--wl-b1); }
+.bars:not(.bars-scale) > .bar:nth-child(7n+2) .bar-fill { background: var(--wl-b2); }
+.bars:not(.bars-scale) > .bar:nth-child(7n+3) .bar-fill { background: var(--wl-b3); }
+.bars:not(.bars-scale) > .bar:nth-child(7n+4) .bar-fill { background: var(--wl-b4); }
+.bars:not(.bars-scale) > .bar:nth-child(7n+5) .bar-fill { background: var(--wl-b5); }
+.bars:not(.bars-scale) > .bar:nth-child(7n+6) .bar-fill { background: var(--wl-b6); }
+.bars:not(.bars-scale) > .bar:nth-child(7n) .bar-fill { background: var(--wl-b7); }
+.bars:not(.bars-scale) > .bar.bar-good .bar-fill { background: var(--wl-barre-ok); }
+/* Quiz corrigé : le vert ne désigne que la bonne réponse, les autres barres passent en neutre
+   (sinon le vert de la série b2 se confondrait avec elle, constaté le 18/10/2026). */
+.bars:not(.bars-scale):has(> .bar-good) > .bar:not(.bar-good) .bar-fill { background: var(--wl-b7); }
+/* Bonne réponse : cadre vert, libellé en gras (la coche « ✓ » est dans le texte),
+   mention écrite sur la projection. Un seul passage, jamais de clignotement. */
+.bar-good { outline: 3px solid var(--wl-barre-ok); outline-offset: 3px; border-radius: var(--wl-rayon-s); animation: wl-bonne .5s ease-out; }
+.bar-good .bar-label { font-weight: bold; }
+.s-results .bar-good .bar-label::after { content: " · Bonne réponse"; font-weight: normal; }
+.bar-value { font-family: var(--wl-police-titre); font-weight: bold; white-space: nowrap; }
+/* Échelle : colonnes verticales, pour que 10 notes tiennent à l'écran. */
+.bars-scale { grid-auto-flow: column; grid-auto-columns: 1fr; align-items: end; gap: .4rem; }
+.bars-scale .bar { display: flex; flex-direction: column-reverse; align-items: stretch; gap: .25rem; text-align: center; }
+.bars-scale .bar-track { height: 8rem; display: flex; align-items: flex-end; border-radius: var(--wl-rayon-s); }
+.bars-scale .bar-fill { width: 100%; height: 0; border-radius: var(--wl-rayon-s); background: var(--wl-b3); }
+.s-results .bars-scale .bar-track { height: 40vh; }
+.results-none { margin: var(--wl-esp-3) 0; padding: var(--wl-esp-5) var(--wl-esp-4); text-align: center;
+  border: 2px dashed var(--wl-bord); border-radius: var(--wl-rayon); }
+.s-results .results-none { font-size: 1.1em; }
+.results-foot { color: var(--wl-texte-doux); margin-top: .75rem; }
+.exo-link { margin: 0 0 1rem; display: flex; gap: var(--wl-esp-3); align-items: center; flex-wrap: wrap; }
+.s-link { display: flex; gap: 1.5rem; align-items: center; margin: .25rem 0 1rem; }
+.s-link .qr-img { width: 8rem; height: 8rem; image-rendering: pixelated; background: var(--wl-qr-fond); padding: .4rem; border-radius: var(--wl-rayon-s); display: block; }
+.s-link-text { margin: 0; font-size: 1.1rem; }
+.steps { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: var(--wl-esp-3); }
+.step { display: flex; gap: var(--wl-esp-4); align-items: center; justify-content: space-between; padding: .75rem 1rem;
+  background: var(--wl-carte); border: 2px solid var(--wl-bord); border-radius: var(--wl-rayon-s); }
+.step.is-done { border-color: var(--wl-ok); }
+.step-text { flex: 1; }
+.step-detail { display: block; margin-top: .25rem; color: var(--wl-texte-doux); font-size: .95rem; }
+.btn-fait { min-width: 6.5rem; min-height: 3rem; }
+.memo-list { padding-left: 1.2rem; }
+.memo-list li { margin-bottom: .8rem; }
+.step-actions { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; }
+.btn-stuck[aria-pressed="true"] { color: var(--wl-fond); background: var(--wl-texte); border-color: var(--wl-texte); }
+.device-line .btn { min-height: 2.5rem; margin-left: .5rem; }
+.btn-fait[aria-pressed="true"] { color: var(--wl-sur-primaire); background: var(--wl-ok); border-color: var(--wl-ok); }
+.results-compare { font-weight: bold; color: var(--wl-texte); margin-top: .5rem; }
+.s-results .results-compare { font-size: 1.3rem; text-align: center; }
+
+/* Anneau Oui / Non, Vrai / Faux (projection). */
+.donut { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1em 1.5em; }
+.donut-svg { width: 11em; height: 11em; flex: none; }
+.donut-piste { fill: none; stroke: var(--wl-trace); stroke-width: 18; }
+.donut-arc { fill: none; stroke-width: 18; transition: stroke-dasharray 1s var(--wl-sortie), stroke-dashoffset 1s var(--wl-sortie); }
+.donut-arc-0 { stroke: var(--wl-b1); }
+.donut-arc-1 { stroke: var(--wl-b2); }
+.donut-total { fill: var(--wl-texte); font-family: var(--wl-police-titre); font-weight: bold; font-size: 24px; text-anchor: middle; }
+.donut-unit { fill: var(--wl-texte-doux); font-size: 9px; text-anchor: middle; }
+.donut-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: .6em; }
+.donut-legend li { display: flex; align-items: center; gap: .5em; }
+.donut-sw { width: .9em; height: .9em; flex: none; }
+.donut-sw-0 { background: var(--wl-b1); border-radius: 3px; }   /* carré */
+.donut-sw-1 { background: var(--wl-b2); border-radius: 50%; }   /* rond : forme différente */
+.donut-name { font-family: var(--wl-police-titre); font-weight: bold; font-size: 1.15em; white-space: nowrap; }
+.donut-count { color: var(--wl-texte-doux); }
+/* Quiz corrigé : comme les barres, le vert ne désigne que la bonne réponse, l'autre passe en neutre. */
+.donut:has(li:nth-child(1).is-good) .donut-arc-0 { stroke: var(--wl-barre-ok); }
+.donut:has(li:nth-child(1).is-good) .donut-sw-0 { background: var(--wl-barre-ok); }
+.donut:has(li:nth-child(1).is-good) .donut-arc-1 { stroke: var(--wl-b7); }
+.donut:has(li:nth-child(1).is-good) .donut-sw-1 { background: var(--wl-b7); }
+.donut:has(li:nth-child(2).is-good) .donut-arc-1 { stroke: var(--wl-barre-ok); }
+.donut:has(li:nth-child(2).is-good) .donut-sw-1 { background: var(--wl-barre-ok); }
+.donut:has(li:nth-child(2).is-good) .donut-arc-0 { stroke: var(--wl-b7); }
+.donut:has(li:nth-child(2).is-good) .donut-sw-0 { background: var(--wl-b7); }
+.donut-legend .is-good { outline: 3px solid var(--wl-barre-ok); outline-offset: 3px; border-radius: var(--wl-rayon-s); }
+
+/* Jauge d'échelle (projection) : moyenne en demi-cercle + colonnes. */
+.scale-view { display: grid; grid-template-columns: auto 1fr; gap: 1.5em; align-items: end; }
+.gauge { position: relative; width: 12em; }
+.gauge-svg { display: block; width: 100%; height: auto; }
+.gauge-track, .gauge-fill { fill: none; stroke-width: 14; stroke-linecap: round; }
+.gauge-track { stroke: var(--wl-trace); }
+.gauge-fill { stroke: var(--wl-b3); stroke-dasharray: 0 200; transition: stroke-dasharray 1s var(--wl-sortie); }
+.gauge-value { position: absolute; left: 0; right: 0; bottom: .1em; margin: 0; text-align: center; color: var(--wl-texte-doux); }
+.gauge-value strong { font-family: var(--wl-police-titre); font-size: 2.2em; color: var(--wl-texte); }
+.scale-view .bars-scale .bar-track { height: 5.5em; }
+.s-results .scale-view .bars-scale .bar-track { height: 22vh; }
+
+.cloud { text-align: center; line-height: 1.25; margin: 0; }
+.cloud-word { display: inline-block; margin: .1em .3em; font-family: var(--wl-police-titre); font-weight: bold; transition: font-size .6s var(--wl-sortie); }
+.cloud-fit .cloud-word { transition: none; margin: .05em .25em; }
+/* Le mot le plus cité respire (lent, 3 % d'amplitude : la lecture n'est pas gênée). */
+.cloud-top { animation: wl-respire 6s ease-in-out infinite; }
+/* Projection : chaque mot flotte doucement (mouvement vertical seulement : il ne
+   fausse pas la mesure de largeur de fitResults). Durée unique de 6 s, phase de
+   chaque mot posée par common.js d'après l'horloge ; calque graphique (will-change)
+   pour un mouvement fluide sur téléphone, sans recalage au pixel. */
+.cloud-fit .cloud-word { animation: wl-flotte 6s ease-in-out infinite; will-change: transform; }
+.cloud-fit .cloud-word.cloud-top { animation-name: wl-flotte-top; }
+.is-new { animation: wl-pop .4s ease-out; }
+.cloud-c0 { color: var(--wl-primaire); }
+.cloud-c1 { color: var(--wl-b2); }
+.cloud-c2 { color: var(--wl-texte); }
+.cloud-c3 { color: var(--wl-b4); }
+
+.wall { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--wl-esp-2); grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+.wall-item {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--wl-esp-2);
+  padding: .6rem .8rem; background: var(--wl-carte); border-bottom: 3px solid var(--wl-b1);
+  border-radius: var(--wl-rayon-s); overflow-wrap: break-word; box-shadow: var(--wl-ombre);
+}
+.wall-item:nth-child(6n+2) { border-bottom-color: var(--wl-b2); }
+.wall-item:nth-child(6n+3) { border-bottom-color: var(--wl-b3); }
+.wall-item:nth-child(6n+4) { border-bottom-color: var(--wl-b4); }
+.wall-item:nth-child(6n+5) { border-bottom-color: var(--wl-b5); }
+.wall-item:nth-child(6n)   { border-bottom-color: var(--wl-b6); }
+.wall-item.is-new, .note.is-new { animation: wl-pose .4s ease-out; }
+.wall-hidden { opacity: .5; text-decoration: line-through; }
+
+/* Mur collaboratif, post-it collectif, gommettes. Les post-its gardent un
+ * fond clair et un texte foncé dans les deux thèmes (contraste ≥ 12:1). */
+.post-text { flex: 1; min-width: 0; }
+.wall-item .btn { flex-shrink: 0; white-space: nowrap; }
+.wall-collab { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.likes { font-weight: bold; white-space: nowrap; color: var(--wl-ko); }
+[data-theme="dark"] .screen .likes { color: var(--wl-ko); }
+.btn-like[aria-pressed="true"] { color: var(--wl-sur-primaire); background: var(--wl-ko); border-color: var(--wl-ko); }
+.board { display: grid; gap: var(--wl-esp-3); align-items: start; overflow-x: auto; }
+.board-col { background: var(--wl-trace); border-radius: var(--wl-rayon); padding: .5rem; min-height: 6rem; }
+.board-title { font-size: 1em; margin: .25rem .25rem .5rem; }
+.note {
+  color: var(--wl-postit-texte); background: var(--wl-postit-0); border-radius: var(--wl-rayon-xs); padding: .5rem .6rem; margin-bottom: .5rem;
+  box-shadow: var(--wl-ombre-note); overflow-wrap: break-word;
+}
+.note-text { margin: 0; font-weight: bold; }
+.note-sub { margin: .35rem 0 0; padding-top: .35rem; border-top: 1px dashed var(--wl-postit-sub); }
+.note-tools { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
+.note-tools select { width: auto; min-height: 2.5rem; font-size: .85rem; padding: .2rem .4rem; }
+.note.board-c0 { background: var(--wl-postit-0); }
+.note.board-c1 { background: var(--wl-postit-1); }
+.note.board-c2 { background: var(--wl-postit-2); }
+.note.board-c3 { background: var(--wl-postit-3); }
+.note.board-c4 { background: var(--wl-postit-4); }
+.note.board-c5 { background: var(--wl-postit-5); }
+.posts { border-top: 2px solid var(--wl-bord); margin-top: 1rem; padding-top: 1rem; }
+.posts h2 { font-size: 1.05rem; }
+.posts .wall { grid-template-columns: 1fr; }
+/* Projection : colonnes égales, assez larges pour un mot long. */
+.s-results .wall { grid-template-columns: repeat(auto-fill, minmax(10em, 1fr)); }
+.s-results .wall-item { flex-wrap: wrap; overflow-wrap: normal; }
+.s-results .wall-item > :first-child { flex: 1 1 auto; min-width: min-content; }
+.s-results .wall-item .likes { margin-left: auto; }
+.dots-rank { margin: 0; padding-left: 1.8em; display: grid; gap: .6rem; }
+.dots-rank li::marker { font-family: var(--wl-police-titre); font-weight: bold; font-size: 1.2em; }
+/* Idée large (moins de retours à la ligne), décompte en colonne fixe près des gommettes. */
+.dots-row { display: grid; grid-template-columns: minmax(9rem, 50%) minmax(5rem, 1fr) 9em; gap: var(--wl-esp-3); align-items: center; }
+.dots-row .bar-value { justify-self: start; }
+.dots-row .bar-value { font-size: 1em; }
+.dots-text { justify-self: start; background: var(--wl-postit-0); color: var(--wl-postit-texte); border-radius: var(--wl-rayon-xs); padding: .3em .6em; font-weight: bold; box-shadow: var(--wl-ombre-note); }
+.dots-grouped { color: var(--wl-postit-sub); font-weight: normal; }
+.dots-row.is-new { animation: wl-pose .4s ease-out; }
+.dots { display: inline-flex; flex-wrap: wrap; gap: .2em; vertical-align: middle; margin-left: .3em; }
+.dot { width: .9em; height: .9em; border-radius: 50%; background: var(--wl-pastille); border: 2px solid var(--wl-pastille-bord); }
+
+/* « Quitter » en fin de session : respiration lente (cycle de 3,6 s, moins d'un éclat par seconde). */
+.blink { animation: wl-respire-btn 3.6s ease-in-out infinite; }
+
+/* --- Animations : courtes et douces, jouées au changement réel d'une donnée --- */
+@keyframes wl-pop { from { opacity: 0; transform: scale(.6); } 60% { transform: scale(1.08); } to { opacity: 1; transform: none; } }
+@keyframes wl-pose { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes wl-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wl-bonne { from { outline-color: transparent; outline-offset: 12px; } to { outline-color: var(--wl-barre-ok); outline-offset: 3px; } }
+@keyframes wl-respire { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes wl-flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.08em); } }
+@keyframes wl-flotte-top { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-.06em) scale(1.04); } }
+@keyframes wl-respire-btn { 50% { background: var(--wl-primaire); color: var(--wl-sur-primaire); } }
+@keyframes wl-anneau { 0% { transform: scale(.7); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+@keyframes wl-roll { from { transform: translateY(100vh); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* --- Animateur ---------------------------------------------------------------- */
+
+/* Sur PC, utiliser la largeur disponible et garder les quatre onglets accessibles
+   pendant la lecture d'une longue liste de questions. Les appareils étroits gardent
+   la disposition existante. */
+@media (min-width: 1100px) {
+  .admin main { width: 100%; max-width: 84rem; padding: var(--wl-esp-5) var(--wl-esp-6); }
+  .admin #editor > .tabs, .admin #sessions > .tabs {
+    position: sticky; top: 0; z-index: 5; background: var(--wl-fond);
+    box-shadow: 0 2px 0 var(--wl-bord);
+  }
+}
+
+.list { list-style: none; padding: 0; margin: 0; }
+.list-item {
+  display: flex; flex-wrap: wrap; gap: var(--wl-esp-3); align-items: center;
+  padding: .75rem; border: 1px solid var(--wl-bord); border-radius: var(--wl-rayon);
+  background: var(--wl-carte); margin-bottom: var(--wl-esp-2); box-shadow: 0 2px 0 var(--wl-bord);
+  transition: border-color .15s ease-out;
+}
+.list-item:hover { border-color: var(--wl-champ); }
+.q-list { counter-reset: q; }
+.q-list .list-item::before {
+  counter-increment: q; content: counter(q); display: inline-flex; align-items: center; justify-content: center;
+  min-width: 2rem; height: 2rem; border-radius: var(--wl-rayon-pilule); background: var(--wl-piste);
+  font-family: var(--wl-police-titre); font-weight: bold;
+}
+.q-list .is-current::before { background: var(--wl-primaire); color: var(--wl-sur-primaire); }
+.is-current { border: 3px solid var(--wl-primaire); background: var(--wl-primaire-pale); }
+.code-big { font-size: 1.6rem; letter-spacing: .15em; }
+.live-text { font-family: var(--wl-police-titre); font-size: 1.2rem; font-weight: bold; }
+.live-state { font-weight: bold; color: var(--wl-accent); }
+.live-results { margin-top: 1rem; }
+.qr-admin .qr-img { width: 12rem; height: 12rem; image-rendering: pixelated; border-radius: var(--wl-rayon-s); }
+dialog { border: var(--wl-bord-fin); border-radius: var(--wl-rayon); width: min(40rem, 94vw); padding: 1.5rem; background: var(--wl-carte); color: var(--wl-texte); box-shadow: 0 20px 50px var(--wl-voile); }
+dialog::backdrop { background: var(--wl-voile); }
+.gen-detail { display: block; }
+.btn:has(+ input:focus-visible) { outline: 3px solid var(--wl-focus); outline-offset: 2px; } /* champ fichier masqué : le focus se voit sur son bouton */
+label.btn { cursor: pointer; }
+.gen-list .check { align-items: flex-start; }
+.gen-list input { margin-top: .3rem; }
+
+/* Compteurs de signaux (anonymes) au-dessus du pilotage. */
+.signals { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .5rem; }
+.signal-count { padding: .2rem .6rem; border-radius: var(--wl-rayon-pilule); background: var(--wl-trace); color: var(--wl-texte); font-size: .9rem; }
+.signal-count.is-on { background: var(--wl-alerte-fond); color: var(--wl-alerte-texte); border: 2px solid var(--wl-alerte-bord); font-weight: bold; }
+.cron-state { margin: .75rem 0 0; padding: .4rem .7rem; border-radius: var(--wl-rayon); font-size: .9rem; }
+.cron-state.is-ok { color: var(--wl-ok); }
+.cron-state.is-ko { background: var(--wl-alerte-fond); color: var(--wl-alerte-texte); border: 2px solid var(--wl-alerte-bord); }
+.ranking { margin: .5rem 0 0; padding-left: 0; list-style: none; display: grid; gap: .25rem; }
+
+/* --- Projection ------------------------------------------------------------- */
+
+.screen { min-height: 100vh; font-size: clamp(1rem, 2.2vw, 2.2rem); } /* thème clair de projection = jetons de :root */
+/* Projection sombre : bleu pétrole. Carte plus claire que le fond (1,27:1) pour que les
+   cartes se détachent ; toutes les couleurs ci-dessous passent sur le fond ET sur la carte. */
+[data-theme="dark"] .screen {
+  --wl-fond: var(--wl-c-petrole); --wl-carte: var(--wl-c-petrole-carte);
+  --wl-texte: var(--wl-c-ivoire); --wl-texte-doux: #CFC3B0;
+  --wl-bord: #769294; --wl-piste: #2B6166; --wl-trace: #2B6166; --wl-champ: #769294; --wl-champ-fond: var(--wl-c-petrole-carte);
+  --wl-primaire: #E89B85; --wl-primaire-fonce: #E89B85; --wl-primaire-clair: var(--wl-c-petrole-carte); --wl-primaire-pale: var(--wl-c-petrole-carte);
+  --wl-sur-primaire: var(--wl-c-petrole);
+  --wl-barre: #E89B85; --wl-barre-ok: #7FD36B; --wl-ok: #7FD36B; --wl-ok-fond: var(--wl-c-petrole-carte);
+  --wl-ko: #FF9A8A; --wl-accent: #6FD0C8; --wl-focus: #F5C84C;
+  --wl-b1: #E89B85; --wl-b2: #79BE79; --wl-b3: #DDA500; --wl-b4: #D69DC4;
+  --wl-b5: #6FD0C8; --wl-b6: #8DB8F0; --wl-b7: #CFC3B0;
+  --wl-pastille: #DDA500; --wl-pastille-bord: #F5C84C; --wl-moutarde: #DDA500;
+  --wl-ombre-couleur: rgba(0, 0, 0, .35); --wl-ombre: 0 2px 0 var(--wl-ombre-couleur);
+}
+/* Cartes visibles au vidéoprojecteur (les noirs y sont écrasés) : contour 3:1 sur le fond. */
+[data-theme="dark"] .screen .wall-item { border-top: 2px solid var(--wl-bord); border-left: 2px solid var(--wl-bord); border-right: 2px solid var(--wl-bord); }
+[data-theme="dark"] .screen .explain, [data-theme="dark"] .screen .s-explain { border-top: 2px solid var(--wl-bord); border-right: 2px solid var(--wl-bord); border-bottom: 2px solid var(--wl-bord); }
+[data-theme="dark"] .screen .btn { color: var(--wl-texte); border-color: var(--wl-texte-doux); background: transparent; }
+[data-theme="dark"] .screen .btn:hover { background: var(--wl-carte); }
+[data-theme="dark"] .screen .btn-primary { color: var(--wl-sur-primaire); background: var(--wl-primaire); border-color: var(--wl-primaire); }
+/* Mesuré le 15/10/2026 : sans cette règle, le survol (collé après un appui sur
+   téléphone) donne au bouton principal le fond des cartes avec son texte foncé. */
+[data-theme="dark"] .screen .btn-primary:hover { color: var(--wl-sur-primaire); background: var(--wl-primaire); border-color: var(--wl-primaire); }
+[data-theme="dark"] .screen .banner { color: var(--wl-alerte-texte); }
+body.screen { background: var(--wl-fond); color: var(--wl-texte); }
+.screen-head { display: flex; align-items: center; gap: var(--wl-esp-4); padding: 1rem 2rem; flex-wrap: wrap; }
+.s-title { flex: 1; font-family: var(--wl-police); font-weight: normal; font-size: 1em; margin: 0; color: var(--wl-texte-doux); }
+.screen-tools { display: flex; gap: var(--wl-esp-2); align-items: center; font-size: 1rem; }
+.s-count { font-weight: bold; margin-right: 1rem; }
+.screen-main { max-width: none; padding: 1rem 2rem 2rem; margin-right: clamp(11rem, 20vw, 20rem); }
+.s-meta { color: var(--wl-texte-doux); margin: 0; }
+.s-text { font-size: 2em; line-height: 1.2; margin: .3em 0 .6em; }
+.s-timer { font-family: var(--wl-police-titre); font-size: 1.6em; font-weight: bold; color: var(--wl-accent); margin: 0 0 .5em; }
+.s-timer-low { color: var(--wl-ko) !important; }
+.s-results .bar-track { height: 1.4em; }
+.s-results .bar-value { font-size: 1.3em; }
+.s-results .dots-row .bar-value { font-size: 1em; }
+.s-results .cloud { font-size: 1.4em; }
+.s-waiting { text-align: center; font-size: 1.2em; margin-top: .5em; }
+.s-waiting p { margin: .2em 0; }
+.s-answered { position: relative; display: inline-block; padding: .1em .6em; font-family: var(--wl-police-titre); font-size: 1.6em; font-weight: bold; }
+.s-all { color: var(--wl-barre-ok); }
+.s-all::before { content: "✓ "; }
+/* « Tout le monde a répondu » : anneau moutarde qui s'élargit une seule fois (1,2 s). */
+.s-answered::after { content: ""; position: absolute; inset: 0; border: 4px solid var(--wl-moutarde); border-radius: var(--wl-rayon-pilule); opacity: 0; pointer-events: none; }
+.is-complete .s-answered::after { animation: wl-anneau 1.2s ease-out 1; }
+.s-progress { display: block; width: min(24em, 60%); height: .5em; margin: .3em auto .6em; background: var(--wl-trace); border-radius: var(--wl-rayon-pilule); overflow: hidden; }
+.s-progress-fill { display: block; width: 0; height: 100%; background: var(--wl-accent); border-radius: var(--wl-rayon-pilule); transition: width .5s var(--wl-sortie); }
+.s-explain { border-left: .25em solid var(--wl-barre-ok); padding: .4em .7em; margin: .6em 0 0; font-size: .8em; line-height: 1.35; background: var(--wl-carte); border-radius: 0 var(--wl-rayon) var(--wl-rayon) 0; }
+.s-hint { font-size: .8em; color: var(--wl-texte-doux); margin: .4em 0 0; }
+.recap-title { font-size: 1.2em; margin: 1rem 0 .5rem; }
+.recap { margin: 0; padding-left: 1.4em; text-align: left; }
+.recap li { margin: .35em 0; }
+.recap-q { display: block; color: var(--wl-texte-doux); font-size: .85em; }
+.recap-a { display: block; }
+.recap-box { text-align: left; }
+#s-ended { padding-top: .5em; }
+.s-thanks { text-align: center; margin: 0 0 .3em; }
+#s-recap { font-size: 1.2em; font-family: var(--wl-police-titre); }
+#s-ended:has(.recap) .s-thanks { font-size: 1.1em; }
+#s-recap .recap-title { color: var(--wl-primaire); font-family: var(--wl-police); font-size: .55em; letter-spacing: .2em; text-transform: uppercase; text-align: center; }
+#s-recap .explain { border: 0; background: transparent; text-align: center; max-width: 80%; margin: .3em auto 0; line-height: 1.35; }
+/* Plus de 6 questions : récap sur deux colonnes, lisible de loin. */
+#s-recap .recap:has(> li:nth-child(7)) { columns: 2; column-gap: 3em; }
+#s-recap .recap li { break-inside: avoid; }
+.tabs { display: flex; gap: .25rem; flex-wrap: wrap; border-bottom: 2px solid var(--wl-bord); margin: 1rem 0; }
+.tab {
+  font: inherit; font-weight: bold; color: var(--wl-texte-doux); background: none; border: 0; cursor: pointer;
+  padding: .7rem 1.1rem; min-height: var(--wl-cible); border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.tab { border-radius: var(--wl-rayon-s) var(--wl-rayon-s) 0 0; }
+.tab:hover { color: var(--wl-primaire); background: var(--wl-primaire-pale); }
+.tab[aria-selected="true"] { color: var(--wl-primaire); border-bottom-color: var(--wl-primaire); background: var(--wl-carte); }
+.tab:focus-visible { outline: 3px solid var(--wl-focus); outline-offset: 2px; }
+.pre-wrap { white-space: pre-wrap; }
+.bilan-board { display: grid; gap: var(--wl-esp-4); grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); margin-top: 1rem; }
+.bilan-q { border: 1px solid var(--wl-bord); border-radius: var(--wl-rayon); padding: .75rem; background: var(--wl-carte); }
+.bilan-q h3 { font-size: 1rem; margin: 0; }
+.s-pcount { font-size: 1.1rem; padding: 0 .5rem; }
+.s-welcome { text-align: center; margin-top: 3em; }
+.s-join-line { font-size: 1.8em; margin: .4em 0; }
+.code-big { font-weight: bold; }
+.s-welcome .code-big { font-size: 1.6em; letter-spacing: .2em; color: var(--wl-primaire); }
+.qr-corner {
+  position: fixed; right: 1.5rem; bottom: 1.5rem; width: clamp(10rem, 18vw, 18rem);
+  background: var(--wl-qr-fond); color: var(--wl-postit-texte); border-radius: var(--wl-rayon); padding: .75rem; text-align: center;
+  box-shadow: var(--wl-ombre);
+}
+.qr-corner .qr-img { width: 100%; height: auto; image-rendering: pixelated; display: block; }
+.qr-code { margin: .3rem 0 0; font-size: clamp(.9rem, 1.6vw, 1.6rem); }
+/* Pilotage (animateur connecté) : barre en bas à gauche, hors du QR code. */
+.s-pilot { position: fixed; left: 1.5rem; bottom: 1rem; display: flex; gap: var(--wl-esp-2); align-items: center; flex-wrap: wrap; font-size: 1rem; }
+.s-keys { font-size: .85rem; color: var(--wl-texte-doux); }
+/* La barre de pilotage s'arrête avant le QR code (elle passait dessous, mesuré le 18/10/2026 à 768 et 1440 px). */
+.s-pilot { max-width: calc(100% - clamp(10rem, 18vw, 18rem) - 3.5rem); }
+.s-live .s-pilot { max-width: calc(100% - clamp(6rem, 9vw, 9rem) - 3.5rem); }
+.s-noqr:not(.s-qr-big) .s-pilot { max-width: none; }
+.screen-main { padding-bottom: 5rem; }
+/* Résultats affichés : en-tête, question et QR réduits. */
+.s-live .screen-head { padding: .6rem 2rem .9rem; }
+.s-live .s-meta { font-size: max(.7em, .85rem); margin-top: .6em; } /* jamais sous 15 px */
+.s-live .s-text { font-size: .95em; margin: .1em 0 .9em; }
+.s-live .s-results .bar-track { height: 1.5em; }
+/* Projection : colonne des choix plus large (moins de retours à la ligne). */
+.s-results .bars:not(.bars-scale) > .bar { grid-template-columns: minmax(8rem, 42%) 1fr auto; }
+.s-live .s-timer { font-size: 1.2em; }
+.s-live .screen-main { margin-right: clamp(7rem, 11vw, 11rem); padding: .3rem 2rem 0; }
+.s-live .qr-corner { width: clamp(6rem, 9vw, 9rem); padding: .4rem; }
+.s-live .qr-code { font-size: clamp(.85rem, 1vw, 1rem); }
+/* Touche Q : QR code en grand au centre. */
+.s-qr-big .qr-corner { right: 50%; bottom: 50%; transform: translate(50%, 50%); width: min(70vh, 60vw); padding: 1rem; }
+.s-qr-big .qr-code { font-size: clamp(1.2rem, 3vw, 3rem); }
+/* Fin de session : la conclusion monte du bas de l'écran (générique, 7 s, une fois). */
+.s-roll { animation: wl-roll 7s cubic-bezier(.25, .6, .3, 1); }
+/* Calque gardé après la montée : sans lui, Chrome redessine le texte à l'arrêt
+   et le recale au pixel (petit saut constaté le 15/10/2026, hypothèse non vérifiée). */
+#s-recap { will-change: transform; backface-visibility: hidden; }
+.s-rolling { overflow: hidden; }
+/* Projection sur écran étroit (téléphone, tablette en portrait) : la marge
+   réservée au QR code prenait près de la moitié de la largeur (nuage à 251 px
+   sur 449, mesuré le 16/10/2026). Le QR reste en bas à droite. */
+@media (max-width: 760px) {
+  .screen-main, .s-live .screen-main { margin-right: 0; }
+  .qr-corner, .s-live .qr-corner { width: 5.5rem; padding: .3rem; right: .75rem; bottom: .75rem; }
+  .s-pilot { max-width: calc(100% - 8rem); }
+  .s-keys { display: none; } /* pas de clavier sur un téléphone */
+  /* Gommettes : l'idée sur toute la largeur, puis pastilles et décompte dessous (la
+     grille à largeurs minimales débordait de l'écran : 509 px mesurés sur 390, 16/10/2026). */
+  .dots-row { grid-template-columns: 1fr auto; }
+  .dots-row .dots-text { grid-column: 1 / -1; }
+  .dots-rank { padding-left: 1.4em; }
+  .screen-main { padding-bottom: 8rem; } /* le QR code, fixé en bas à droite, ne cache plus la dernière ligne */
+  .screen-head { padding: .75rem 1rem; }
+  .screen-tools { flex-wrap: wrap; gap: .35rem; }
+  .screen-tools .btn { font-size: .85rem; min-height: 2.75rem; padding: .3rem .6rem; }
+  .s-count { margin-right: .35rem; }
+  /* Boutons du pilotage plus compacts (cible tactile 44 px gardée). */
+  .s-pilot { gap: .35rem; }
+  .s-pilot .btn { font-size: .9rem; min-height: 2.75rem; padding: .3rem .75rem; }
+}
+/* Écran tactile étroit : glisser remplace Précédente / Suivante. */
+.s-swipe { display: none; font-size: .85rem; color: var(--wl-texte-doux); }
+@media (max-width: 760px) and (pointer: coarse) {
+  #p-prev, #p-next, #p-step.s-swipe-only { display: none; }
+  .s-swipe { display: inline; }
+}
+/* QR masqué depuis l'espace animateur : la place va au contenu. */
+.s-noqr:not(.s-qr-big) .qr-corner { display: none; }
+.s-noqr .screen-main { margin-right: 0; }
+
+/* Projection : « Oser demander » et podium (à la demande de l'animateur). */
+.s-show-title { font-family: var(--wl-police-titre); font-size: 1.4em; margin: .2em 0 .6em; }
+.s-asks { list-style: none; margin: 0; padding: 0; display: grid; gap: .5em; }
+.s-ask { display: flex; align-items: center; gap: 1em; padding: .5em .8em; background: var(--wl-carte);
+  border-radius: var(--wl-rayon); border-left: .3em solid var(--wl-primaire); }
+.s-ask-text { flex: 1; }
+.s-ask-votes { font-family: var(--wl-police-titre); font-weight: bold; white-space: nowrap; }
+.s-ask.is-answered { opacity: .6; border-left-color: var(--wl-ok); }
+[data-theme="dark"] .screen .s-ask { border-top: 2px solid var(--wl-bord); border-right: 2px solid var(--wl-bord); border-bottom: 2px solid var(--wl-bord); }
+.s-podium { display: flex; justify-content: center; align-items: flex-end; gap: 1.5em; margin-top: 1em; }
+.s-step { flex: 0 1 14em; text-align: center; border-radius: var(--wl-rayon) var(--wl-rayon) 0 0; padding: .6em .5em 0;
+  background: var(--wl-carte); border: 2px solid var(--wl-bord); }
+.s-step-1 { min-height: 9em; border-color: var(--wl-pastille); border-width: 4px; }
+.s-step-2 { min-height: 7em; }
+.s-step-3 { min-height: 5.5em; }
+.s-step-names { font-family: var(--wl-police-titre); font-weight: bold; font-size: 1.1em; margin: 0 0 .2em; }
+.s-step-score { margin: 0; color: var(--wl-texte-doux); }
+.s-step-rank { font-family: var(--wl-police-titre); font-size: 2em; font-weight: bold; color: var(--wl-pastille); margin: .2em 0; }
+
+/* --- Impression ---------------------------------------------------------------- */
+
+.print { background: var(--wl-qr-fond); padding: 1.5rem; max-width: 60rem; margin: 0 auto; }
+.print table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+.print td { border: 1px solid var(--wl-bord); padding: .4rem .6rem; }
+.print td:last-child { width: 8rem; text-align: right; }
+.print section { break-inside: avoid; }
+@media print {
+  html { font-size: 11pt; }
+  .no-print, .topbar, .footer { display: none !important; }
+  .print { padding: 0; }
+}
+
+/* Formulaire d'ajout d'un thème : étiquette et champ sur une ligne, l'un sous l'autre sur écran étroit. */
+.form-grid { display: grid; grid-template-columns: max-content 1fr; gap: var(--wl-esp-2) 1rem; align-items: center; margin: .5rem 0; }
+.form-grid input { width: 100%; min-width: 0; box-sizing: border-box; }
+#seance-new-raw, #seance-prompt { width: 100%; box-sizing: border-box; }
+@media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }

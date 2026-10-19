@@ -1,0 +1,31 @@
+19/10/2026 — mise à jour mesurée : l’aperçu autonome est publié dans `maswaddpt47-cmyk/PAPPERBOARD-CHATGPT`, avec un déploiement GitHub Pages réussi (`39206406840`). Les mentions de livraison locale ci-dessous décrivent la livraison initiale. GitHub Pages sert les graphes fictifs ; il n’exécute pas l’application PHP.
+
+19/10/2026 — vérifications exécutées dans la copie locale Codex, base 3a99948.
+
+Syntaxe JavaScript : 15 fichiers vérifiés, aucun échec.
+
+$ node tests/contrastes.js
+Contrastes : 119 couples mesurés, 0 échec(s).
+
+Code de sortie : 0
+
+$ node tests/galerie-commandes.cjs
+OK Le premier écran contient des réponses et un anneau à 8 / 4
+OK Suivant et Précédent parcourent les formes
+OK Les touches des listes de choix restent disponibles
+OK Une flèche sur la page passe à la forme suivante
+OK La galerie distingue résultats, absence de réponse et compteur masqué
+OK Le QCM multiple conserve le nombre de répondants
+OK Les douze formes ont des données et le dernier bouton est désactivé
+OK Un lien incomplet ou invalide revient à un aperçu utilisable
+Galerie : 8 scénarios de commandes validés, sans navigateur.
+
+Code de sortie : 0
+
+Palette : huit primitifs préservés ; couleurs définies dans les blocs de jetons ; aucune variable indéfinie.
+Aperçu autonome : styles et scripts identiques aux sources ; aucune dépendance externe ; connexions interdites.
+
+NON EXÉCUTÉ JUSQU’AU BOUT : bash tests/run.sh s’arrête au contrôle de syntaxe PHP (php: command not found).
+NON EXÉCUTÉ : validation visuelle / tests Playwright ; Chromium refuse de démarrer (setsockopt: Operation not permitted).
+Aucune mesure visuelle responsive, aucun test de lecteur d’écran et aucun test PHP de bout en bout revendiqués.
+Aucun déploiement ni écriture distante réalisé.
