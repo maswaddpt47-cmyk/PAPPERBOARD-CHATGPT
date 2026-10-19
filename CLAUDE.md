@@ -1,5 +1,8 @@
 # WoocLight — règles de travail (dépôt PAPPERBOARD)
 
+**Lire aussi `AGENTS.md`** : consigne utilisateur du 19/10/2026 sur les alertes
+immédiates en cas de blocage, les délais bornés et les points de suivi.
+
 **Lire d'abord `CHANTIERS.md`** : état du projet, décisions à trancher, points
 à ne pas défaire. Cahier des charges de référence : `docs/prompt-wooclight.md`.
 

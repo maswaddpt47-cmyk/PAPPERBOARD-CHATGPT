@@ -1,3 +1,7 @@
+## Consigne de suivi — 19/10/2026
+
+Consigne utilisateur : signaler immédiatement un blocage avec sa cause et les solutions possibles, borner les commandes et abandonner une méthode qui échoue. Protocole inscrit dans `AGENTS.md`, référencé par `CLAUDE.md`. Aucun changement de comportement de l’application.
+
 # Publication de la copie de test
 
 19/10/2026 — mise à jour mesurée : l’aperçu autonome est publié dans `maswaddpt47-cmyk/PAPPERBOARD-CHATGPT`, avec un déploiement GitHub Pages réussi (`39206406840`). Les mentions de livraison locale ci-dessous décrivent la livraison initiale. GitHub Pages sert les graphes fictifs ; il n’exécute pas l’application PHP.
