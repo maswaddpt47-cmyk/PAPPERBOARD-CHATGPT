@@ -222,6 +222,41 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .projection-window-actions .btn { min-height: 44px; }
 .projection-screen > .modal-body { flex: 1; }
 .projection-screen h3, .projection-screen .answer-text { overflow-wrap: anywhere; }
+.projection-mode { overflow: hidden; }
+.projection-screen > .modal-head { padding: .65rem 1.25rem; gap: .5rem 1rem; }
+.projection-screen > .modal-head .eyebrow { margin: 0 0 .25rem; font-size: .65rem; }
+.projection-screen > .projection-navigation { padding: .6rem 1.25rem; gap: .5rem; align-items: center; }
+.projection-screen .projection-navigation .btn { padding: .65rem .85rem; font-size: .8rem; }
+.projection-screen > .projection-fit-viewport { position: relative; overflow: hidden; scrollbar-gutter: auto; }
+.projection-fit-canvas { position: absolute; top: 0; left: 0; width: 100%; transform-origin: top left; }
+.projection-fit-canvas > .projection-preview, .projection-fit-canvas > .result-gallery-preview { padding: clamp(12px, 2vh, 24px) clamp(16px, 3vw, 48px); min-height: 0; }
+.projection-screen .projection-meta { flex-direction: row; align-items: center; gap: 1rem; margin-bottom: .75rem; }
+.projection-screen .projection-meta span { min-width: 0; overflow-wrap: anywhere; }
+.projection-screen .projection-preview > h3, .projection-screen .projection-ending h3, .projection-screen .gallery-slide-head h3 { font-size: clamp(24px, 2.7vw, 42px); line-height: 1.2; margin: .25rem 0 .75rem; }
+.projection-screen .projection-preview .question-topline { margin-bottom: .5rem; }
+.projection-screen .projection-preview .question-description, .projection-screen .gallery-description { font-size: clamp(16px, 1.5vw, 22px); line-height: 1.45; margin: 0 0 1rem; }
+.projection-screen .projection-preview .answer-list, .projection-screen .projection-options { gap: clamp(6px, 1vh, 12px); padding: 0; }
+.projection-screen .projection-preview .answer-row { padding: .65rem 1rem; margin: 0; }
+.projection-screen .projection-preview .answer-head { display: flex; align-items: center; flex-wrap: nowrap; gap: .65rem; }
+.projection-screen .projection-preview .answer-text { font-size: clamp(16px, 1.8vw, 26px); line-height: 1.35; flex: 1; min-width: 0; padding: 0; }
+.projection-screen .projection-preview .answer-value { display: inline; flex-shrink: 0; font-size: clamp(16px, 1.8vw, 26px); margin: 0; }
+.projection-screen .projection-preview .answer-value > .muted { font-size: .75em; }
+.projection-screen .projection-preview .answer-letter { display: grid; flex-shrink: 0; width: 1.6rem; height: 1.6rem; }
+.projection-screen .projection-preview .answer-bar { height: 6px; margin-top: .4rem; }
+.projection-screen .projection-preview .chart-foot { font-size: .875rem; line-height: 1.4; margin: 0; padding: .65rem 0 0; }
+.projection-screen .projection-preview .info-note { font-size: clamp(15px, 1.3vw, 19px); line-height: 1.4; padding: .65rem 1rem; margin: .75rem 0 0; }
+.projection-screen .projection-wait { padding-top: .75rem; }
+.projection-screen .projection-preview .word-cloud { min-height: 0; padding: .75rem 0; }
+.projection-screen .projection-preview .binary-chart { grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); padding-top: 0; }
+.projection-screen .projection-preview .donut-chart { width: 100%; max-width: 200px; }
+.projection-screen .has-many-options .answer-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.projection-screen .has-written-results .answer-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media(max-width:1099px) { .projection-screen .has-written-results .answer-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width:639px) {
+  .projection-screen > .modal-head, .projection-screen > .projection-navigation { padding: .5rem .75rem; }
+  .projection-screen .has-written-results .answer-list, .projection-screen .projection-options { grid-template-columns: 1fr; }
+  .projection-screen .projection-preview .binary-chart { grid-template-columns: minmax(100px, 140px) minmax(0, 1fr); gap: 1rem; }
+}
 .session-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
 .session-controls h2, .session-controls h3 { margin-bottom: 1rem; }
 .session-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
@@ -229,6 +264,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .join-overview { display: flex; align-items: center; gap: 1.25rem; min-width: 0; }
 .join-overview > div { min-width: 0; }
 .session-qr { width: 150px; height: 150px; object-fit: contain; background: white; padding: 4px; flex-shrink: 0; }
+.qr-trigger { display: inline-flex; border: 0; padding: 0; background: transparent; border-radius: 6px; cursor: zoom-in; line-height: 0; flex-shrink: 0; }
+.qr-trigger .session-qr { display: block; }
+.qr-modal { background: var(--card); }
+.qr-modal .modal-body { padding: clamp(12px, 2vh, 24px); }
+.qr-zoom-content { text-align: center; }
+.qr-zoom-content .session-qr { display: block; width: min(420px, 52vh, 100%); height: auto; aspect-ratio: 1; margin: 0 auto; image-rendering: pixelated; }
+.qr-zoom-content .generator-note { margin-bottom: 0; }
 .session-code { font-family: var(--wl-police-titre); letter-spacing: .1em; font-size: 1.5em; }
 .invitation-url { overflow-wrap: anywhere; color: var(--teal); }
 .anonymous-ask { padding: 1rem 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
@@ -240,6 +282,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .participant-roster-list li::marker { color: var(--wl-texte-doux); }
 .projection-invitation { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: 0; margin-left: auto; color: var(--wl-texte); font-size: .8rem; }
 .projection-invitation .session-qr { width: 72px; height: 72px; }
+.projection-screen .projection-invitation .session-qr { width: 56px; height: 56px; }
 .welcome-qr .session-qr { width: 240px; height: 240px; }
 .welcome-qr p { overflow-wrap: anywhere; }
 .participant-mode .sidebar, .participant-mode .topbar, .participant-mode .simulation-notice, .participant-mode .app-footer { display: none; }
@@ -2946,6 +2989,8 @@ var qrcode = function() {
   var joinOnly = !!(window.location && new URLSearchParams(window.location.search).get('join'));
   var joinedHere = false;
   var qrCache = Object.create(null);
+  var projectionObserver = null;
+  var projectionFitPending = false;
   var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   var preparationTools = null;
   var creationDraft = null;
@@ -3146,6 +3191,7 @@ var qrcode = function() {
   }
 
   function render() {
+    if (modalKind === 'qr' && dialog && (dialog.dataset.workshopId !== state.workshopId || (projectionOnly && !sessionSettings().showQr) || state.archived || state.placeholder)) closeDialog();
     if (joinOnly) { renderJoin(); refreshParticipant(); return; }
     if (projectionOnly) {
       document.body.classList.add('projection-mode');
@@ -3251,11 +3297,17 @@ var qrcode = function() {
     var base = window.location ? (window.location.origin || '') + window.location.pathname : '';
     return base + '?join=' + sessionCode() + '&workshop=' + encodeURIComponent(state.workshopId);
   }
-  function qrMarkup() {
+  function qrMarkup(enlarged) {
     var url = invitationUrl();
     if (typeof qrcode !== 'function') return '<p class="muted">Le QR code ne peut pas être affiché. Utilisez le lien ci-dessous.</p>';
     if (!qrCache[url]) { var code = qrcode(0, 'M'); code.addData(url); code.make(); qrCache[url] = code.createDataURL(5, 4); }
-    return '<img class="session-qr" src="' + qrCache[url] + '" alt="QR code du parcours participant simulé">';
+    var image = '<img class="session-qr" src="' + qrCache[url] + '" alt="QR code du parcours participant simulé">';
+    return enlarged ? image : '<button type="button" class="qr-trigger" data-action="zoom-qr" aria-label="Agrandir le QR code de l’atelier" aria-haspopup="dialog">' + image + '</button>';
+  }
+  function enlargeQr() {
+    if ((projectionOnly && !sessionSettings().showQr) || state.archived || state.placeholder) return;
+    showDialog('Rejoindre l’atelier', '<div class="qr-zoom-content">' + qrMarkup(true) + '<p>Code de démonstration : <strong class="session-code">' + sessionCode() + '</strong></p><p class="generator-note">Invitation de simulation : les inscriptions restent dans ce navigateur.</p></div>', button('close-dialog', 'Fermer le QR code', 'close', 'secondary'), 'qr');
+    dialog.dataset.workshopId = state.workshopId;
   }
   function liveSessionControls() {
     var s = sessionSettings();
@@ -3439,7 +3491,7 @@ var qrcode = function() {
     modalKind = kind || '';
     dialog = document.createElement('dialog');
     dialog.id = 'sandbox-dialog';
-    dialog.className = 'modal' + ((kind === 'projection' || kind === 'gallery') ? ' projection-modal' : kind === 'preparation-import' ? ' generator-modal' : '');
+    dialog.className = 'modal' + ((kind === 'projection' || kind === 'gallery') ? ' projection-modal' : kind === 'preparation-import' ? ' generator-modal' : kind === 'qr' ? ' qr-modal' : '');
     dialog.setAttribute('aria-labelledby', 'sandbox-dialog-title');
     var navigation = projected && actions ? '<nav class="modal-actions projection-navigation" aria-label="' + (kind === 'gallery' ? 'Navigation entre les résultats' : 'Navigation entre les questions projetées') + '">' + actions + '</nav>' : '';
     dialog.innerHTML = '<div class="modal-head"><div><p class="eyebrow">' + (projected ? (kind === 'gallery' ? 'APERÇU DES RÉSULTATS' : 'APERÇU PROJECTION') : kind === 'participant' ? 'APERÇU PARTICIPANT' : 'VOTRE ESPACE D’ESSAI') + '</p><h2 id="sandbox-dialog-title">' + esc(title) + '</h2></div>' + button('close-dialog', '<span class="sr-only">Fermer</span>', 'close', 'ghost icon-btn', 'aria-label="Fermer la fenêtre"') + '</div>' + navigation + '<div class="modal-body">' + body + '</div>' + (!projected && actions ? '<div class="modal-actions">' + actions + '</div>' : '');
@@ -3526,7 +3578,7 @@ var qrcode = function() {
       projectionContent = '<div class="question-topline">' + badge(stateLabel(q), q.state === 'open' ? 'green' : 'neutral') + '</div><h3>' + esc(q.title) + '</h3><p class="question-description">' + esc(q.description) + '</p>' + (q.published ? answers(q, true) + (q.explanation ? '<p class="info-note">' + esc(q.explanation) + '</p>' : '') : hiddenResults);
       settings.asks.filter(function (ask) { return ask.published; }).forEach(function (ask) { projectionContent += '<div class="projected-question"><p class="eyebrow">UNE QUESTION DU GROUPE</p><p>' + esc(ask.text) + '</p></div>'; });
     }
-    var body = '<div class="projection-preview"><div class="projection-meta"><span>WoocLight · ' + esc(state.title) + '</span><span>Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div>' + projectionContent + '</div>';
+    var body = '<div class="projection-preview' + (q.options.length > 6 ? ' has-many-options' : '') + (q.type === 'text' ? ' has-written-results' : '') + '"><div class="projection-meta"><span>WoocLight · ' + esc(state.title) + '</span><span>Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div>' + projectionContent + '</div>';
     var projectionResultsButton = q.published ? button('projection-toggle-results', 'Masquer les graphes et réponses', 'eye-off', 'secondary small') : (hasResponses ? button('projection-toggle-results', 'Afficher les graphes et réponses', 'eye', 'primary small') : '');
     renderProjectionFrame('L’écran de votre groupe', body, button('projection-previous', 'Précédente', 'arrow-left', 'ghost', isDisabled(state.current === 0)) + button('projection-next', 'Suivante', 'arrow-right', 'secondary', isDisabled(state.current === state.questions.length - 1)) + projectionResultsButton + button('result-gallery', 'Toutes les formes', 'chart', 'ghost small'));
   }
@@ -3541,9 +3593,35 @@ var qrcode = function() {
   }
   function renderProjectionFrame(title, body, actions) {
     var invitation = current() && !sessionSettings().welcome && sessionSettings().showQr ? '<aside class="projection-invitation">' + qrMarkup() + '<span>Code de démonstration : <strong>' + sessionCode() + '</strong></span></aside>' : '';
-    workspace.innerHTML = '<section class="projection-screen projection-modal"><header class="modal-head"><div><p class="eyebrow">WOOCLIGHT · PROJECTION SIMULÉE</p><h1>' + esc(title) + '</h1></div><div class="projection-window-actions">' + button('projection-fullscreen', document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran', 'screen', 'secondary small') + button('projection-close', 'Fermer la projection', 'close', 'secondary small') + '</div></header><nav class="modal-actions projection-navigation" aria-label="Commandes de la projection">' + actions + invitation + '</nav><div class="modal-body">' + body + '</div></section>';
-    var content = workspace.querySelector('.modal-body');
-    if (content) content.scrollTop = 0;
+    if (projectionObserver) { projectionObserver.disconnect(); projectionObserver = null; }
+    workspace.innerHTML = '<section class="projection-screen projection-modal"><header class="modal-head"><div><p class="eyebrow">WOOCLIGHT · PROJECTION SIMULÉE</p><h1>' + esc(title) + '</h1></div><div class="projection-window-actions">' + button('projection-fullscreen', document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran', 'screen', 'secondary small') + button('projection-close', 'Fermer la projection', 'close', 'secondary small') + '</div></header><nav class="modal-actions projection-navigation" aria-label="Commandes de la projection">' + actions + invitation + '</nav><div class="modal-body projection-fit-viewport"><div class="projection-fit-canvas">' + body + '</div></div></section>';
+    var content = workspace.querySelector('.projection-fit-viewport');
+    if (content && typeof window.ResizeObserver === 'function') {
+      projectionObserver = new window.ResizeObserver(scheduleProjectionFit);
+      projectionObserver.observe(content);
+    }
+    scheduleProjectionFit();
+  }
+  function fitProjection() {
+    var viewport = workspace.querySelector('.projection-fit-viewport');
+    var canvas = workspace.querySelector('.projection-fit-canvas');
+    if (!viewport || !canvas || !viewport.clientWidth || !viewport.clientHeight) return;
+    // Always measure the natural layout: repeated votes must never shrink an already scaled slide.
+    canvas.style.transform = 'none'; canvas.style.left = '0px';
+    canvas.style.width = viewport.clientWidth + 'px';
+    var width = Math.max(canvas.scrollWidth, canvas.offsetWidth);
+    var height = Math.max(canvas.scrollHeight, canvas.offsetHeight);
+    if (!width || !height) return;
+    var scale = Math.min(1, (viewport.clientWidth - 2) / width, (viewport.clientHeight - 2) / height);
+    canvas.style.transform = 'scale(' + scale + ')';
+    canvas.style.left = Math.max(0, (viewport.clientWidth - width * scale) / 2) + 'px';
+    canvas.dataset.fitScale = String(scale);
+  }
+  function scheduleProjectionFit() {
+    if (projectionFitPending) return;
+    if (typeof window.requestAnimationFrame !== 'function') { fitProjection(); return; }
+    projectionFitPending = true;
+    window.requestAnimationFrame(function () { projectionFitPending = false; fitProjection(); });
   }
 
   function galleryScaleContent() {
@@ -3710,6 +3788,7 @@ var qrcode = function() {
     var action = target.dataset.action;
     var index = Number(target.dataset.index);
     var q = current();
+    if (action === 'zoom-qr') { enlargeQr(); return; }
     if (action === 'toggle-registrations') { sessionSettings().registrationsOpen = !sessionSettings().registrationsOpen; save(); render(); return; }
     if (action === 'toggle-qr') { sessionSettings().showQr = !sessionSettings().showQr; save(); render(); return; }
     if (action === 'show-welcome') { sessionSettings().welcome = true; sessionSettings().showAsks = false; sessionSettings().podium = false; save(); render(); return; }
@@ -3900,6 +3979,8 @@ var qrcode = function() {
     render(); document.getElementById('tab-' + activeTab).focus();
   });
   document.addEventListener('fullscreenchange', function () { if (projectionOnly) render(); });
+  if (typeof window.addEventListener === 'function') window.addEventListener('resize', scheduleProjectionFit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleProjectionFit);
   if (typeof window.addEventListener === 'function') window.addEventListener('storage', function (event) {
     if (event.key !== STORAGE_KEY || !event.newValue) return;
     try {

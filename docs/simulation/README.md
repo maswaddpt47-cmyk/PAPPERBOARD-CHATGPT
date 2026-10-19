@@ -55,6 +55,12 @@ distants. **Afficher les graphes et réponses** devient **Masquer les graphes
 et réponses** après publication, dans Animer et Projection. Le masquage retire
 aussi les résultats de l’aperçu participant, tout en conservant les réponses
 reçues. La commande Masquer fonctionne aussi pour une publication sans réponse.
+19/10/2026 — mesuré dans le code : la projection et sa galerie mesurent leur
+contenu et l’ajustent à l’espace disponible en largeur et hauteur. Le calcul
+repart de la taille naturelle à chaque actualisation, redimensionnement ou
+changement de plein écran. Les listes nombreuses utilisent plusieurs colonnes.
+Le QR est cliquable dans Pilotage, l’accueil et la barre de projection : une
+fenêtre l’agrandit, avec fermeture par bouton ou Échap et retour du focus.
 **Bilan**
 permet d’exporter les réponses fictives en CSV et le mémo. La bibliothèque
 charge trois ateliers de démonstration ; « Recommencer » ouvre une nouvelle
@@ -86,3 +92,10 @@ automatiques sont bloquées. Ces scénarios utilisent un DOM simplifié : ils ne
 remplacent pas un contrôle visuel ni un essai multiappareil.
 
 Reconstruction : `python3 scripts/packager-simulation.py`.
+
+19/10/2026 — contrôle navigateur : `node docs/simulation/qa-navigateur.cjs`
+est exécuté par `.github/workflows/simulation-ui.yml`, avec Playwright et Chrome.
+Il mesure le contenu visible des questions et des douze formes de la galerie
+à 1920×1080, 1280×720, 1024×768 et 390×844 ; il contrôle aussi le redimensionnement,
+le plein écran, le QR agrandi, les fermetures et le focus. Les résultats sont
+dans GitHub Actions ; Chromium reste bloqué dans l’environnement local.

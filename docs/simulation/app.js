@@ -18,6 +18,8 @@
   var joinOnly = !!(window.location && new URLSearchParams(window.location.search).get('join'));
   var joinedHere = false;
   var qrCache = Object.create(null);
+  var projectionObserver = null;
+  var projectionFitPending = false;
   var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   var preparationTools = null;
   var creationDraft = null;
@@ -218,6 +220,7 @@
   }
 
   function render() {
+    if (modalKind === 'qr' && dialog && (dialog.dataset.workshopId !== state.workshopId || (projectionOnly && !sessionSettings().showQr) || state.archived || state.placeholder)) closeDialog();
     if (joinOnly) { renderJoin(); refreshParticipant(); return; }
     if (projectionOnly) {
       document.body.classList.add('projection-mode');
@@ -323,11 +326,17 @@
     var base = window.location ? (window.location.origin || '') + window.location.pathname : '';
     return base + '?join=' + sessionCode() + '&workshop=' + encodeURIComponent(state.workshopId);
   }
-  function qrMarkup() {
+  function qrMarkup(enlarged) {
     var url = invitationUrl();
     if (typeof qrcode !== 'function') return '<p class="muted">Le QR code ne peut pas être affiché. Utilisez le lien ci-dessous.</p>';
     if (!qrCache[url]) { var code = qrcode(0, 'M'); code.addData(url); code.make(); qrCache[url] = code.createDataURL(5, 4); }
-    return '<img class="session-qr" src="' + qrCache[url] + '" alt="QR code du parcours participant simulé">';
+    var image = '<img class="session-qr" src="' + qrCache[url] + '" alt="QR code du parcours participant simulé">';
+    return enlarged ? image : '<button type="button" class="qr-trigger" data-action="zoom-qr" aria-label="Agrandir le QR code de l’atelier" aria-haspopup="dialog">' + image + '</button>';
+  }
+  function enlargeQr() {
+    if ((projectionOnly && !sessionSettings().showQr) || state.archived || state.placeholder) return;
+    showDialog('Rejoindre l’atelier', '<div class="qr-zoom-content">' + qrMarkup(true) + '<p>Code de démonstration : <strong class="session-code">' + sessionCode() + '</strong></p><p class="generator-note">Invitation de simulation : les inscriptions restent dans ce navigateur.</p></div>', button('close-dialog', 'Fermer le QR code', 'close', 'secondary'), 'qr');
+    dialog.dataset.workshopId = state.workshopId;
   }
   function liveSessionControls() {
     var s = sessionSettings();
@@ -511,7 +520,7 @@
     modalKind = kind || '';
     dialog = document.createElement('dialog');
     dialog.id = 'sandbox-dialog';
-    dialog.className = 'modal' + ((kind === 'projection' || kind === 'gallery') ? ' projection-modal' : kind === 'preparation-import' ? ' generator-modal' : '');
+    dialog.className = 'modal' + ((kind === 'projection' || kind === 'gallery') ? ' projection-modal' : kind === 'preparation-import' ? ' generator-modal' : kind === 'qr' ? ' qr-modal' : '');
     dialog.setAttribute('aria-labelledby', 'sandbox-dialog-title');
     var navigation = projected && actions ? '<nav class="modal-actions projection-navigation" aria-label="' + (kind === 'gallery' ? 'Navigation entre les résultats' : 'Navigation entre les questions projetées') + '">' + actions + '</nav>' : '';
     dialog.innerHTML = '<div class="modal-head"><div><p class="eyebrow">' + (projected ? (kind === 'gallery' ? 'APERÇU DES RÉSULTATS' : 'APERÇU PROJECTION') : kind === 'participant' ? 'APERÇU PARTICIPANT' : 'VOTRE ESPACE D’ESSAI') + '</p><h2 id="sandbox-dialog-title">' + esc(title) + '</h2></div>' + button('close-dialog', '<span class="sr-only">Fermer</span>', 'close', 'ghost icon-btn', 'aria-label="Fermer la fenêtre"') + '</div>' + navigation + '<div class="modal-body">' + body + '</div>' + (!projected && actions ? '<div class="modal-actions">' + actions + '</div>' : '');
@@ -598,7 +607,7 @@
       projectionContent = '<div class="question-topline">' + badge(stateLabel(q), q.state === 'open' ? 'green' : 'neutral') + '</div><h3>' + esc(q.title) + '</h3><p class="question-description">' + esc(q.description) + '</p>' + (q.published ? answers(q, true) + (q.explanation ? '<p class="info-note">' + esc(q.explanation) + '</p>' : '') : hiddenResults);
       settings.asks.filter(function (ask) { return ask.published; }).forEach(function (ask) { projectionContent += '<div class="projected-question"><p class="eyebrow">UNE QUESTION DU GROUPE</p><p>' + esc(ask.text) + '</p></div>'; });
     }
-    var body = '<div class="projection-preview"><div class="projection-meta"><span>WoocLight · ' + esc(state.title) + '</span><span>Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div>' + projectionContent + '</div>';
+    var body = '<div class="projection-preview' + (q.options.length > 6 ? ' has-many-options' : '') + (q.type === 'text' ? ' has-written-results' : '') + '"><div class="projection-meta"><span>WoocLight · ' + esc(state.title) + '</span><span>Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div>' + projectionContent + '</div>';
     var projectionResultsButton = q.published ? button('projection-toggle-results', 'Masquer les graphes et réponses', 'eye-off', 'secondary small') : (hasResponses ? button('projection-toggle-results', 'Afficher les graphes et réponses', 'eye', 'primary small') : '');
     renderProjectionFrame('L’écran de votre groupe', body, button('projection-previous', 'Précédente', 'arrow-left', 'ghost', isDisabled(state.current === 0)) + button('projection-next', 'Suivante', 'arrow-right', 'secondary', isDisabled(state.current === state.questions.length - 1)) + projectionResultsButton + button('result-gallery', 'Toutes les formes', 'chart', 'ghost small'));
   }
@@ -613,9 +622,35 @@
   }
   function renderProjectionFrame(title, body, actions) {
     var invitation = current() && !sessionSettings().welcome && sessionSettings().showQr ? '<aside class="projection-invitation">' + qrMarkup() + '<span>Code de démonstration : <strong>' + sessionCode() + '</strong></span></aside>' : '';
-    workspace.innerHTML = '<section class="projection-screen projection-modal"><header class="modal-head"><div><p class="eyebrow">WOOCLIGHT · PROJECTION SIMULÉE</p><h1>' + esc(title) + '</h1></div><div class="projection-window-actions">' + button('projection-fullscreen', document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran', 'screen', 'secondary small') + button('projection-close', 'Fermer la projection', 'close', 'secondary small') + '</div></header><nav class="modal-actions projection-navigation" aria-label="Commandes de la projection">' + actions + invitation + '</nav><div class="modal-body">' + body + '</div></section>';
-    var content = workspace.querySelector('.modal-body');
-    if (content) content.scrollTop = 0;
+    if (projectionObserver) { projectionObserver.disconnect(); projectionObserver = null; }
+    workspace.innerHTML = '<section class="projection-screen projection-modal"><header class="modal-head"><div><p class="eyebrow">WOOCLIGHT · PROJECTION SIMULÉE</p><h1>' + esc(title) + '</h1></div><div class="projection-window-actions">' + button('projection-fullscreen', document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran', 'screen', 'secondary small') + button('projection-close', 'Fermer la projection', 'close', 'secondary small') + '</div></header><nav class="modal-actions projection-navigation" aria-label="Commandes de la projection">' + actions + invitation + '</nav><div class="modal-body projection-fit-viewport"><div class="projection-fit-canvas">' + body + '</div></div></section>';
+    var content = workspace.querySelector('.projection-fit-viewport');
+    if (content && typeof window.ResizeObserver === 'function') {
+      projectionObserver = new window.ResizeObserver(scheduleProjectionFit);
+      projectionObserver.observe(content);
+    }
+    scheduleProjectionFit();
+  }
+  function fitProjection() {
+    var viewport = workspace.querySelector('.projection-fit-viewport');
+    var canvas = workspace.querySelector('.projection-fit-canvas');
+    if (!viewport || !canvas || !viewport.clientWidth || !viewport.clientHeight) return;
+    // Always measure the natural layout: repeated votes must never shrink an already scaled slide.
+    canvas.style.transform = 'none'; canvas.style.left = '0px';
+    canvas.style.width = viewport.clientWidth + 'px';
+    var width = Math.max(canvas.scrollWidth, canvas.offsetWidth);
+    var height = Math.max(canvas.scrollHeight, canvas.offsetHeight);
+    if (!width || !height) return;
+    var scale = Math.min(1, (viewport.clientWidth - 2) / width, (viewport.clientHeight - 2) / height);
+    canvas.style.transform = 'scale(' + scale + ')';
+    canvas.style.left = Math.max(0, (viewport.clientWidth - width * scale) / 2) + 'px';
+    canvas.dataset.fitScale = String(scale);
+  }
+  function scheduleProjectionFit() {
+    if (projectionFitPending) return;
+    if (typeof window.requestAnimationFrame !== 'function') { fitProjection(); return; }
+    projectionFitPending = true;
+    window.requestAnimationFrame(function () { projectionFitPending = false; fitProjection(); });
   }
 
   function galleryScaleContent() {
@@ -782,6 +817,7 @@
     var action = target.dataset.action;
     var index = Number(target.dataset.index);
     var q = current();
+    if (action === 'zoom-qr') { enlargeQr(); return; }
     if (action === 'toggle-registrations') { sessionSettings().registrationsOpen = !sessionSettings().registrationsOpen; save(); render(); return; }
     if (action === 'toggle-qr') { sessionSettings().showQr = !sessionSettings().showQr; save(); render(); return; }
     if (action === 'show-welcome') { sessionSettings().welcome = true; sessionSettings().showAsks = false; sessionSettings().podium = false; save(); render(); return; }
@@ -972,6 +1008,8 @@
     render(); document.getElementById('tab-' + activeTab).focus();
   });
   document.addEventListener('fullscreenchange', function () { if (projectionOnly) render(); });
+  if (typeof window.addEventListener === 'function') window.addEventListener('resize', scheduleProjectionFit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleProjectionFit);
   if (typeof window.addEventListener === 'function') window.addEventListener('storage', function (event) {
     if (event.key !== STORAGE_KEY || !event.newValue) return;
     try {

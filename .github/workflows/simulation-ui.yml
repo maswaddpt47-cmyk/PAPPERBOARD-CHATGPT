@@ -1,0 +1,39 @@
+name: Simulation - controle navigateur
+
+on:
+  push:
+    branches: [main, fix/projection-adaptative-qr]
+    paths:
+      - simulation.html
+      - docs/simulation/*.js
+      - docs/simulation/*.cjs
+      - docs/simulation/*.css
+      - docs/simulation/*.html
+      - assets/qrcode.js
+      - assets/style.css
+      - scripts/packager-simulation.py
+      - .github/workflows/simulation-ui.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  navigateur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Preparer Playwright et Chrome
+        run: |
+          timeout 90s npm install --prefix "$RUNNER_TEMP/simulation-ui" --no-save --package-lock=false playwright@1.62.1
+          echo "NODE_PATH=$RUNNER_TEMP/simulation-ui/node_modules" >> "$GITHUB_ENV"
+          if command -v google-chrome >/dev/null; then
+            echo "WOOCLIGHT_BROWSER=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          else
+            "$RUNNER_TEMP/simulation-ui/node_modules/.bin/playwright" install --with-deps chromium
+          fi
+      - name: Mesurer la projection et verifier le QR agrandi
+        run: |
+          python3 scripts/packager-simulation.py
+          node docs/simulation/qa-navigateur.cjs
