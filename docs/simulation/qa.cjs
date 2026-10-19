@@ -307,4 +307,63 @@ test('Un refus de stockage garde le nom précédent et permet de réessayer',()=
     assert.equal(app.workshops().find(w=>w.workshopId===id).title,'Nom enregistré après réessai');
   }
 });
+test('Réglages ne présente jamais une purge serveur fictive comme réelle',()=>{
+  action('tab',{tab:'settings'});const html=elements.get('workspace').innerHTML;
+  assert(html.includes('Dernier passage de la purge horaire'));
+  assert(html.includes('non applicable dans cette simulation'));
+  assert(html.includes('Aucune purge horaire n’y est exécutée'));
+});
+test('Annuler ou choisir un thème inconnu ne crée aucune démonstration',()=>{
+  const before=JSON.stringify(app.workshops());
+  action('create-demo');assert(app.dialogHtml().includes('Thème de la démonstration'));action('close-dialog');
+  submit({id:'create-demo-form',values:{theme:'inconnu'}});
+  assert(elements.get('demo-error').textContent.includes('Choisissez'));
+  assert.equal(JSON.stringify(app.workshops()),before);
+});
+test('Chaque thème de démo produit douze participants et les huit types animables',()=>{
+  for(const theme of ['scams','phone','footprint']){
+    const previous=JSON.parse(JSON.stringify(app.state()));
+    action('create-demo');submit({id:'create-demo-form',values:{theme}});
+    const demo=app.state();assert(demo.demo);assert.equal(demo.participants,12);assert.equal(demo.questions.length,10);
+    assert.equal(new Set(demo.questions.map(q=>q.type)).size,8);assert(app.validState(demo));assert(app.readState().demo);
+    assert(demo.questions.every(q=>q.responses>0));assert(demo.session.pseudos);
+    assert(app.workshops().some(w=>w.workshopId===previous.workshopId));
+    assert(elements.get('workspace').innerHTML.includes('Pilotage en direct'));
+    assert.equal(new Set(demo.questions.map(q=>q.id)).size,10);
+  }
+});
+test('Dupliquer une démo crée un atelier sans marqueur Démo ni votes',()=>{
+  const original=app.state().workshopId;action('duplicate-workshop',{id:original});
+  assert.equal(app.state().demo,undefined);assert.equal(app.state().participants,0);
+  assert(app.state().questions.every(q=>q.responses===0));
+  assert(app.workshops().find(w=>w.workshopId===original).demo);
+});
+test('Supprimer les démos demande confirmation et préserve les créations et les copies',()=>{
+  submit({id:'workshop-form',values:{title:'Démo — atelier créé manuellement'}});
+  const original=JSON.parse(JSON.stringify(app.state()));
+  const demos=app.workshops().filter(w=>w.demo===true);assert.equal(demos.length,3);
+  action('archive-workshop',{id:demos[0].workshopId});
+  const real=JSON.parse(JSON.stringify(app.workshops().filter(w=>w.demo!==true)));
+  const before=JSON.stringify(app.workshops());sandbox.confirm=()=>false;action('delete-demos');assert.equal(JSON.stringify(app.workshops()),before);
+  sandbox.confirm=()=>true;action('delete-demos');assert(app.workshops().every(w=>w.demo!==true));
+  assert.deepEqual(JSON.parse(JSON.stringify(app.workshops())),real);
+  assert.equal(app.state().workshopId,original.workshopId);assert.equal(app.state().title,original.title);
+  assert(!elements.get('workspace').innerHTML.includes('data-action="delete-demos"'));
+  assert(elements.get('workspace').innerHTML.includes('Créer une session de démonstration'));
+});
+test('Un refus de stockage conserve les ateliers lors de la suppression des démos',()=>{
+  submit({id:'create-demo-form',values:{theme:'scams'}});
+  const write=sandbox.localStorage.setItem;
+  for(const key of ['wl_sandbox_workshops_v1','wl_sandbox_v3']){
+    const before=JSON.stringify(app.workshops()),stored=JSON.stringify([...memory]);
+    sandbox.localStorage.setItem=(name,value)=>{if(name===key)throw new Error('quota');write(name,value);};
+    action('delete-demos');assert.equal(JSON.stringify(app.workshops()),before);assert.equal(JSON.stringify([...memory]),stored);
+  }
+  sandbox.localStorage.setItem=write;action('delete-demos');assert(app.workshops().every(w=>w.demo!==true));
+});
+test('Supprimer la dernière démo laisse un espace vide sans recréer un exemple',()=>{
+  for(const workshop of app.workshops().slice())action('delete-workshop',{id:workshop.workshopId});
+  submit({id:'create-demo-form',values:{theme:'phone'}});assert.equal(app.workshops().length,1);
+  action('delete-demos');assert.equal(app.workshops().length,0);assert(app.readState().placeholder);
+});
 console.log(tests+' scénarios validés. Aucun réseau, aucune donnée réelle.');

@@ -7,7 +7,7 @@
   if (!workspace) return;
   var activeView = 'workshop';
   var activeTab = 'prep';
-  var workshopTabs = [['prep', 'Préparer', 'list'], ['control', 'Pilotage', 'settings'], ['live', 'Animer', 'play'], ['recap', 'Bilan', 'chart']];
+  var workshopTabs = [['prep', 'Préparer', 'list'], ['control', 'Pilotage', 'settings'], ['live', 'Animer', 'play'], ['recap', 'Bilan', 'chart'], ['settings', 'Réglages', 'settings']];
   var modalKind = '';
   var dialog = null;
   var dialogReturnFocus = null;
@@ -95,6 +95,21 @@
   function newWorkshopState(title) {
     return { version: 1, workshopId: makeId(), libraryId: 'custom', title: title, conclusion: '', current: 0, capacity: 18, participants: 0, ended: false, helpCount: 0, anonymousPublished: false, anonymousAnswered: false, questions: [], updated: new Date().toISOString() };
   }
+  function newDemoState(theme) {
+    var demo = fixture(theme);
+    demo.demo = true; demo.title = ('Démo — ' + demo.title).slice(0, 120);
+    demo.participants = 12; demo.current = 0;
+    var counts = [[5, 4, 3], [1, 1, 9, 1], [1, 2, 2, 4, 3], [1, 9, 1, 1], [11, 9, 8], [], [8, 4], [7, 10, 1, 4]];
+    demo.questions.forEach(function (q, index) {
+      q.id = makeId(); q.counts = counts[index]; q.responses = 12; q.state = 'closed'; q.published = true;
+      if (q.type === 'text') { q.texts = ['Prendre le temps de vérifier', 'Demander conseil', 'Passer par le site officiel', 'Garder la maîtrise de mes choix']; q.responses = q.texts.length; }
+    });
+    demo.questions.push({ id: makeId(), type: 'wordcloud', title: 'Quel mot retenez-vous de cet atelier ?', description: 'Un mot, sans nom ni donnée personnelle.', options: [], counts: [], texts: ['Prudence', 'Vérifier', 'Entraide', 'Prudence', 'Confiance', 'Pause', 'Conseil', 'Vérifier', 'Curiosité', 'Calme', 'Entraide', 'Prudence'], responses: 12, state: 'closed', published: true });
+    demo.questions.push({ id: makeId(), type: 'truefalse', title: 'En cas de doute, je peux demander conseil avant d’agir.', description: 'Choisissez Vrai ou Faux.', options: ['Vrai', 'Faux'], counts: [10, 2], responses: 12, correct: 0, explanation: 'Prendre le temps de demander conseil aide à décider sans précipitation.', state: 'closed', published: true });
+    demo.questions[0].state = 'open';
+    var settings = sessionSettings(demo); settings.pseudos = true; settings.signals = { fast: 1, again: 1, help: 2 };
+    return demo;
+  }
   function sessionSettings(value) {
     var target = value || state;
     if (!target.session) target.session = {
@@ -114,7 +129,7 @@
   function validState(value) {
     function integer(number, min, max) { return Number.isInteger(number) && number >= min && number <= max; }
     function text(string, min, max) { return typeof string === 'string' && string.length >= min && string.length <= max; }
-    if (value && ((value.archived !== undefined && typeof value.archived !== 'boolean') || (value.placeholder !== undefined && typeof value.placeholder !== 'boolean'))) return false;
+    if (value && ((value.archived !== undefined && typeof value.archived !== 'boolean') || (value.placeholder !== undefined && typeof value.placeholder !== 'boolean') || (value.demo !== undefined && typeof value.demo !== 'boolean'))) return false;
     if (value && !validSession(value.session)) return false;
     if (!value || value.version !== 1 || !text(value.title, 1, 120) || !text(value.conclusion === undefined ? '' : value.conclusion, 0, 600) || value.capacity !== 18 || !integer(value.participants, 0, 18) || !integer(value.helpCount, 0, 18) || typeof value.ended !== 'boolean' || typeof value.anonymousPublished !== 'boolean' || !Array.isArray(value.questions) || value.questions.length > 50 || !integer(value.current, 0, Math.max(0, value.questions.length - 1))) return false;
     var ids = new Set();
@@ -171,6 +186,7 @@
     copy.libraryId = 'custom'; copy.current = 0; copy.participants = 0;
     copy.ended = false; copy.archived = false; copy.helpCount = 0;
     copy.anonymousPublished = false; copy.anonymousAnswered = false;
+    delete copy.demo;
     delete copy.session; sessionSettings(copy); copy.session.signals.help = 0;
     copy.questions.forEach(function (q) { q.id = makeId(); q.counts = q.options.map(function () { return 0; }); q.texts = []; q.responses = 0; q.state = 'draft'; q.published = false; });
     return switchWorkshop(copy);
@@ -205,6 +221,19 @@
     state = replacement ? JSON.parse(JSON.stringify(replacement)) : newWorkshopState('Aucun atelier');
     if (!replacement) state.placeholder = true;
     if (!save()) { state = previous; return false; }
+    return true;
+  }
+  function deleteDemos() {
+    var remaining = allWorkshops().filter(function (entry) { return entry.demo !== true; });
+    var previousSaved = savedWorkshops;
+    if (!persistSavedWorkshops(remaining)) return false;
+    if (state.demo !== true) return true;
+    var previous = state;
+    var replacement = remaining.find(function (entry) { return !entry.archived; }) || remaining[0];
+    state = replacement ? JSON.parse(JSON.stringify(replacement)) : newWorkshopState('Aucun atelier');
+    if (!replacement) state.placeholder = true;
+    if (!save()) { state = previous; persistSavedWorkshops(previousSaved); return false; }
+    participantDevices = Object.create(null);
     return true;
   }
 
@@ -262,7 +291,7 @@
       button('participant', 'Aperçu participant', 'phone', 'secondary', isDisabled(!state.questions.length || state.archived)) + button('result-gallery', 'Galerie des résultats', 'chart', 'secondary') + projectionLink()) +
       (state.archived ? '<div class="archive-notice"><p>Cet atelier est archivé. Son bilan reste consultable ; restaurez-le pour le modifier ou l’animer.</p>' + button('restore-workshop', 'Restaurer l’atelier', 'refresh', 'secondary small', 'data-id="' + esc(state.workshopId) + '"') + '</div>' : '') + '<div class="view-tabs" id="workshop-tabs" role="tablist" aria-label="Étapes de l’atelier">' + workshopTabs.map(function (tab) {
         return '<button type="button" role="tab" id="tab-' + tab[0] + '" class="tab' + (activeTab === tab[0] ? ' active' : '') + '" aria-selected="' + (activeTab === tab[0]) + '" aria-controls="workshop-panel" tabindex="' + (activeTab === tab[0] ? '0' : '-1') + '" data-action="tab" data-tab="' + tab[0] + '" ' + isDisabled(state.archived && tab[0] !== 'recap') + '>' + ico(tab[2]) + tab[1] + '</button>';
-      }).join('') + '</div><div id="workshop-panel" role="tabpanel" aria-labelledby="tab-' + activeTab + '">' + (activeTab === 'prep' ? preparation() : activeTab === 'control' ? pilotage() : activeTab === 'recap' ? recap() : live()) + '</div>';
+      }).join('') + '</div><div id="workshop-panel" role="tabpanel" aria-labelledby="tab-' + activeTab + '">' + (activeTab === 'prep' ? preparation() : activeTab === 'control' ? pilotage() : activeTab === 'recap' ? recap() : activeTab === 'settings' ? settingsPanel() : live()) + '</div>';
   }
 
   function rail() {
@@ -312,6 +341,9 @@
   }
   function pilotage() {
     return '<div class="pilotage-toolbar"><p class="muted">Gérez l’accueil, les inscriptions et les échanges du groupe. Les questions et les votes se pilotent depuis Animer.</p>' + button('go-live', 'Aller aux questions', 'play', 'primary') + '</div>' + liveSessionControls() + '<div class="pilotage-questions">' + asksControls() + '</div>';
+  }
+  function settingsPanel() {
+    return '<section class="panel content-card"><h2>Entretien et conservation</h2><p id="purge-status" class="info-note" role="status">' + ico('clock') + '<span><strong>Dernier passage de la purge horaire :</strong> non applicable dans cette simulation.</span></p><p>Les essais sont enregistrés dans ce navigateur. Aucune purge horaire n’y est exécutée et aucune date de passage n’est disponible.</p><p class="muted">Sur le site PHP, cet indicateur affiche le passage réel de la tâche planifiée sur Alwaysdata.</p>' + button('open-history', 'Gérer mes ateliers et mes démos', 'list', 'secondary') + '</section>';
   }
   function liveSessionSummary() {
     var s = sessionSettings();
@@ -475,16 +507,23 @@
     var entries = allWorkshops();
     var active = entries.filter(function (entry) { return !entry.archived; });
     var archived = entries.filter(function (entry) { return entry.archived; });
-    workspace.innerHTML = heading('VOS ESSAIS', 'Mes ateliers', 'Vos créations, leurs résultats et leurs archives dans ce navigateur.', button('create-workshop', 'Créer un atelier', 'plus', 'primary')) + workshopGroup('Ateliers en cours', active) + workshopGroup('Ateliers archivés', archived) + '<p class="info-note">Archiver conserve les questions et les résultats. La bibliothèque de modèles propose des séances de démonstration pour créer un nouvel atelier.</p>';
+    workspace.innerHTML = heading('VOS ESSAIS', 'Mes ateliers', 'Vos créations, leurs résultats et leurs archives dans ce navigateur.', button('create-workshop', 'Créer un atelier', 'plus', 'primary')) + workshopGroup('Ateliers en cours', active) + workshopGroup('Ateliers archivés', archived) + demoControls(entries) + '<p class="info-note">Archiver conserve les questions et les résultats. La bibliothèque de modèles propose des séances de démonstration pour créer un nouvel atelier.</p>';
   }
   function workshopGroup(title, entries) {
     return '<section class="panel workshop-group"><div class="panel-head"><h2 class="panel-title">' + title + '</h2><span class="muted">' + entries.length + '</span></div><div class="history-list">' + (entries.length ? entries.map(workshopRow).join('') : '<p class="workshop-empty muted">Aucun atelier dans cette section.</p>') + '</div></section>';
+  }
+  function demoControls(entries) {
+    var count = entries.filter(function (entry) { return entry.demo === true; }).length;
+    return '<section class="panel content-card demo-controls"><h2>Tester avec des participants fictifs</h2><p>Créez une démonstration avec 12 participants fictifs, des réponses, des signaux et une question anonyme. Les démos sont repérées par le badge « Démo ».</p><div class="session-actions">' + button('create-demo', 'Créer une session de démonstration', 'sparkles', 'secondary') + (count ? button('delete-demos', count === 1 ? 'Supprimer la démo' : 'Supprimer les ' + count + ' démos', 'trash', 'danger') : '') + '</div><p class="muted">La suppression groupée concerne uniquement les ateliers marqués « Démo ». Vos créations, imports et copies sont conservés.</p></section>';
+  }
+  function createDemoDialog() {
+    showDialog('Créer une session de démonstration', '<form id="create-demo-form"><p>La démonstration sera enregistrée dans Mes ateliers. Votre atelier actuel sera conservé.</p><div class="form-field"><label class="field-label" for="demo-theme">Thème de la démonstration</label><select id="demo-theme" class="input" name="theme">' + library.map(function (item) { return '<option value="' + item.id + '">' + esc(item.title) + '</option>'; }).join('') + '</select></div><p>12 participants fictifs, les huit types de questions animables, des réponses et des retours du groupe sont prêts à essayer.</p><p id="demo-error" class="form-error" role="alert"></p><div class="modal-actions">' + button('close-dialog', 'Annuler', '', 'secondary') + '<button type="submit" class="btn primary">' + ico('sparkles') + ' Créer la démo</button></div></form>', '', 'create-demo');
   }
   function workshopRow(entry) {
     var active = entry.workshopId === state.workshopId;
     var attrs = 'data-id="' + esc(entry.workshopId) + '"';
     var open = active ? button('go-prep', entry.archived ? 'Voir le bilan' : 'Préparer', entry.archived ? 'chart' : 'edit', 'secondary small') : button('open-saved-workshop', entry.archived ? 'Voir le bilan' : 'Ouvrir', 'arrow-right', 'secondary small', attrs);
-    return '<div class="prep-item workshop-row"><span class="number-bubble">' + ico('book') + '</span><div class="grow"><h3>' + esc(entry.title) + '</h3><p class="muted">' + entry.questions.length + ' question' + (entry.questions.length > 1 ? 's' : '') + ' · ' + (entry.archived ? 'Archivé' : active ? 'Atelier actuel' : entry.ended ? 'Terminé' : 'En préparation') + '</p></div><div class="workshop-row-actions">' + open + button('rename-workshop', 'Renommer', 'edit', 'secondary small', attrs) + button('duplicate-workshop', 'Dupliquer', 'copy', 'secondary small', attrs) + button(entry.archived ? 'restore-workshop' : 'archive-workshop', entry.archived ? 'Restaurer' : 'Archiver', entry.archived ? 'refresh' : 'book', 'secondary small', attrs) + button('delete-workshop', 'Supprimer', 'trash', 'danger small', attrs) + '</div></div>';
+    return '<div class="prep-item workshop-row"><span class="number-bubble">' + ico('book') + '</span><div class="grow"><h3>' + esc(entry.title) + '</h3>' + (entry.demo === true ? badge('Démo', 'neutral') : '') + '<p class="muted">' + entry.questions.length + ' question' + (entry.questions.length > 1 ? 's' : '') + ' · ' + (entry.archived ? 'Archivé' : active ? 'Atelier actuel' : entry.ended ? 'Terminé' : 'En préparation') + '</p></div><div class="workshop-row-actions">' + open + button('rename-workshop', 'Renommer', 'edit', 'secondary small', attrs) + button('duplicate-workshop', 'Dupliquer', 'copy', 'secondary small', attrs) + button(entry.archived ? 'restore-workshop' : 'archive-workshop', entry.archived ? 'Restaurer' : 'Archiver', entry.archived ? 'refresh' : 'book', 'secondary small', attrs) + button('delete-workshop', 'Supprimer', 'trash', 'danger small', attrs) + '</div></div>';
   }
   function renderNoWorkshop() {
     workspace.innerHTML = heading('VOTRE ESPACE', 'Aucun atelier pour le moment', 'Créez un atelier vide, générez ou importez un JSON, ou partez d’un modèle.', button('create-workshop', 'Créer un atelier', 'plus', 'primary')) + '<section class="panel empty-state"><h2>À vous de préparer le prochain atelier</h2><p>Vos futurs ateliers et leurs archives apparaîtront dans « Mes ateliers ».</p>' + button('open-library', 'Voir les modèles', 'book', 'secondary') + '</section>';
@@ -847,6 +886,14 @@
     if (action === 'reset-question') { if (q && confirm('Effacer les réponses de cette question pour la reposer ?')) { q.counts = q.options.map(function () { return 0; }); q.responses = 0; q.texts = []; q.published = false; q.state = 'draft'; save(); render(); } return; }
     if (action === 'copy-invitation' || action === 'share-invitation') { shareInvitation(action === 'share-invitation'); return; }
     if (action === 'create-workshop') { createWorkshop(); return; }
+    if (action === 'create-demo') { createDemoDialog(); return; }
+    if (action === 'open-history') { activeView = 'history'; render(); return; }
+    if (action === 'delete-demos') {
+      var demos = allWorkshops().filter(function (entry) { return entry.demo === true; });
+      if (!demos.length || !confirm('Supprimer ' + (demos.length === 1 ? 'la session de démonstration' : 'les ' + demos.length + ' sessions de démonstration') + ' ? Vos créations, imports et copies sont conservés.')) return;
+      if (!deleteDemos()) { toast('Impossible de terminer la suppression des démos. Réessayez ; vos autres ateliers sont conservés.'); return; }
+      activeView = 'history'; render(); toast(demos.length === 1 ? 'La démo a été supprimée.' : 'Les démos ont été supprimées.'); return;
+    }
     if (action === 'rename-workshop') {
       var renamed = allWorkshops().find(function (entry) { return entry.workshopId === target.dataset.id; });
       if (renamed) renameWorkshopDialog(renamed);
@@ -956,6 +1003,13 @@
     }
   });
   document.addEventListener('submit', function (event) {
+    if (event.target.id === 'create-demo-form') {
+      event.preventDefault();
+      var theme = String(new FormData(event.target).get('theme') || '');
+      if (!library.some(function (item) { return item.id === theme; })) { document.getElementById('demo-error').textContent = 'Choisissez un thème de démonstration.'; return; }
+      if (!switchWorkshop(newDemoState(theme))) { document.getElementById('demo-error').textContent = 'Impossible d’enregistrer la démo. Votre atelier actuel est conservé.'; return; }
+      closeDialog(); openWorkshopTab('control'); toast('La démo est prête : 12 participants fictifs et des réponses à explorer.'); return;
+    }
     if (event.target.id === 'rename-workshop-form') {
       event.preventDefault();
       var renamed = allWorkshops().find(function (entry) { return entry.workshopId === event.target.dataset.id; });
@@ -1041,6 +1095,7 @@
   if (typeof window.addEventListener === 'function') window.addEventListener('resize', scheduleProjectionFit);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleProjectionFit);
   if (typeof window.addEventListener === 'function') window.addEventListener('storage', function (event) {
+    if (event.key === WORKSHOPS_KEY) { savedWorkshops = readSavedWorkshops(); render(); return; }
     if (event.key !== STORAGE_KEY || !event.newValue) return;
     try {
       var incoming = JSON.parse(event.newValue);

@@ -40,6 +40,7 @@
   <script src="../../assets/qrcode.js"></script>
   <script src="preparation-tools.js"></script>
   <script src="app.js"></script>
+  <script src="tooltips.js"></script>
   <script>
     document.querySelectorAll('[data-icon]').forEach(function(el){el.innerHTML=window.icon(el.dataset.icon);});
     (function(){var toggle=document.getElementById('menu-toggle'),side=document.getElementById('sidebar'),overlay=document.getElementById('nav-overlay');function close(){var wasOpen=side.classList.contains('is-open');side.classList.remove('is-open');overlay.hidden=true;toggle.setAttribute('aria-expanded','false');if(wasOpen)toggle.focus();}toggle.addEventListener('click',function(){var open=!side.classList.contains('is-open');side.classList.toggle('is-open',open);overlay.hidden=!open;toggle.setAttribute('aria-expanded',String(open));if(open)side.querySelector('[data-nav="workshop"]').focus();});overlay.addEventListener('click',close);side.addEventListener('click',function(e){if(e.target.closest('[data-nav]'))close();});document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});document.querySelector('.brand').addEventListener('click',function(e){e.preventDefault();document.querySelector('[data-nav="overview"]').click();close();});})();

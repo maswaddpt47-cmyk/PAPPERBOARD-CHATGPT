@@ -30,3 +30,12 @@ Claude, avec les règles du dépôt dans `CLAUDE.md` et l’état dans `CHANTIER
 
 Ces consignes persistent avec le dépôt. Elles ne changent pas les délais ou
 les fenêtres d’autorisation imposés par la plateforme.
+
+## PAPPERBOARD en attente du feu vert — 19/10/2026
+
+Instruction utilisateur : aucune intervention ni publication sur `PAPPERBOARD`
+avant un feu vert explicite. Les permissions GitHub annoncées comme accordées
+ne constituent pas ce feu vert. La demande de reproduction visuelle fidèle
+ne le constitue pas non plus. Les essais autorisés continuent uniquement dans
+`PAPPERBOARD-CHATGPT`. Ne pas vérifier les nouveaux accès sur PAPPERBOARD
+avant cette autorisation.

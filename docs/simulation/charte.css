@@ -48,8 +48,11 @@ h1, h2, h3, .brand-word, .metric-number { font-family: var(--wl-police-titre); }
 .projection-modal .modal-head, .projection-modal .modal-actions { border-color: var(--wl-bord); }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-color: var(--wl-focus); }
 #current-question { scroll-margin-top: 1rem; }
-#workshop-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; scroll-margin-top: .75rem; }
+#workshop-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; scroll-margin-top: .75rem; }
 #workshop-tabs .tab { min-width: 0; min-height: 44px; justify-content: center; padding-inline: .6rem; }
+#action-tooltip { position: fixed; inset: auto; margin: 0; z-index: 10000; width: max-content; max-width: min(23rem, calc(100vw - 24px)); padding: .65rem .8rem; border: 1px solid var(--wl-focus); border-radius: 8px; background: var(--wl-texte); color: var(--wl-fond); font: normal 14px/1.5 Verdana, sans-serif; text-align: left; white-space: normal; overflow-wrap: anywhere; box-shadow: 0 4px 18px #0003; }
+#action-tooltip[hidden] { display: none; }
+.demo-controls { margin-bottom: 1.25rem; }
 .pilotage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
 .pilotage-toolbar p { flex: 1; min-width: 15rem; margin: 0; }
 .pilotage-questions { margin-bottom: 1.5rem; }

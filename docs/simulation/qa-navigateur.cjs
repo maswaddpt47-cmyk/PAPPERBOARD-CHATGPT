@@ -243,6 +243,70 @@ async function fits(page, label) {
       await animateur.locator('[data-nav="workshop"]').evaluate(node => node.click());
       await animateur.locator('[data-action="tab"][data-tab="control"]').click();
     }
+    async function tooltipFor(button, content) {
+      await button.hover();
+      const tip = animateur.getByRole('tooltip').filter({hasText: content});
+      await tip.waitFor();
+      check((await tip.textContent()).includes(content), 'Info-bulle incorrecte : ' + content);
+      check((await button.getAttribute('aria-describedby') || '').includes('action-tooltip'), 'Info-bulle non reliee au bouton');
+      const rect = await tip.boundingBox(), size = animateur.viewportSize();
+      check(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= size.width + 1 && rect.y + rect.height <= size.height + 1, 'Info-bulle hors ecran');
+      await animateur.keyboard.press('Escape');
+      check(await animateur.locator('#action-tooltip').isHidden(), 'Echap ne masque pas l’info-bulle');
+    }
+    for (const [width, height] of [[1280, 720], [390, 844]]) {
+      await animateur.setViewportSize({width, height});
+      const preserved = await animateur.evaluate(() => ({state: localStorage.getItem('wl_sandbox_v3'),workshops: localStorage.getItem('wl_sandbox_workshops_v1')}));
+      await animateur.locator('[data-action="tab"][data-tab="settings"]').click();
+      check((await animateur.locator('#purge-status').textContent()).includes('non applicable dans cette simulation'), 'Purge affichee comme executee dans le navigateur');
+      check(await animateur.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Les cinq onglets debordent');
+      await tooltipFor(animateur.getByRole('button', {name: 'Gérer mes ateliers et mes démos', exact: true}), 'vos ateliers');
+      await animateur.getByRole('button', {name: 'Gérer mes ateliers et mes démos', exact: true}).click();
+      const createDemo = animateur.getByRole('button', {name: 'Créer une session de démonstration', exact: true});
+      await tooltipFor(createDemo, 'participants et des réponses fictifs');
+      await createDemo.click();
+      const demoDialog = animateur.getByRole('dialog');
+      await tooltipFor(demoDialog.getByRole('button', {name: 'Créer la démo', exact: true}), '12 participants fictifs');
+      check(await demoDialog.isVisible(), 'Echap sur l’info-bulle ferme aussi le formulaire');
+      await demoDialog.getByLabel('Thème de la démonstration', {exact: true}).selectOption('phone');
+      await demoDialog.getByRole('button', {name: 'Créer la démo', exact: true}).click();
+      check((await animateur.locator('.page-title').textContent()).startsWith('Démo — '), 'La demo n’est pas ouverte');
+      const demoState = await animateur.evaluate(() => JSON.parse(localStorage.getItem('wl_sandbox_v3')));
+      check(demoState.demo && demoState.participants === 12 && demoState.questions.length === 10, 'Demo incomplete');
+      check(await animateur.locator('.participant-roster-list li').count() === 12, 'Pseudonymes de demonstration incomplets');
+      await tooltipFor(animateur.getByRole('button', {name: 'Terminer la session', exact: true}), 'conclusion');
+      const settingsTab = animateur.locator('[data-action="tab"][data-tab="settings"]');
+      await settingsTab.focus();
+      await animateur.getByRole('tooltip').waitFor();
+      check((await animateur.getByRole('tooltip').textContent()).includes('purge'), 'Le clavier n’ouvre pas l’info-bulle');
+      await animateur.keyboard.press('Escape');
+      await animateur.locator('[data-nav="history"]').evaluate(node => node.click());
+      check(await animateur.getByRole('button', {name: 'Supprimer la démo', exact: true}).isVisible(), 'Suppression d’une demo absente');
+      await createDemo.click();
+      await demoDialog.getByRole('button', {name: 'Créer la démo', exact: true}).click();
+      await animateur.locator('[data-nav="history"]').evaluate(node => node.click());
+      const currentDemo = animateur.locator('.workshop-row').filter({hasText: 'Atelier actuel'});
+      await currentDemo.getByRole('button', {name: 'Dupliquer', exact: true}).click();
+      const copyState = await animateur.evaluate(() => JSON.parse(localStorage.getItem('wl_sandbox_v3')));
+      check(!copyState.demo && copyState.questions.every(q => q.responses === 0), 'La copie reste une demo ou garde ses votes');
+      await animateur.locator('[data-nav="history"]').evaluate(node => node.click());
+      const removeDemos = animateur.getByRole('button', {name: 'Supprimer les 2 démos', exact: true});
+      await tooltipFor(removeDemos, 'ateliers marqués Démo');
+      animateur.once('dialog', dialog => dialog.dismiss());
+      await removeDemos.click();
+      check(await removeDemos.isVisible(), 'Annuler supprime les demos');
+      animateur.once('dialog', dialog => dialog.accept());
+      await removeDemos.click();
+      check(await animateur.locator('[data-action="delete-demos"]').count() === 0, 'Les demos ne sont pas supprimees');
+      const stored = await animateur.evaluate(() => [JSON.parse(localStorage.getItem('wl_sandbox_v3')),...JSON.parse(localStorage.getItem('wl_sandbox_workshops_v1') || '[]')]);
+      check(stored.some(w => w.workshopId === copyState.workshopId) && stored.some(w => w.workshopId === JSON.parse(preserved.state).workshopId), 'La suppression des demos perd les ateliers personnels');
+      await animateur.evaluate(values => {
+        localStorage.setItem('wl_sandbox_v3', values.state);
+        if (values.workshops === null) localStorage.removeItem('wl_sandbox_workshops_v1'); else localStorage.setItem('wl_sandbox_workshops_v1', values.workshops);
+      }, preserved);
+      await animateur.reload();
+      await animateur.locator('[data-action="tab"][data-tab="control"]').click();
+    }
     check(errors.length === 0, 'Erreurs JavaScript : ' + errors.join(' | '));
     console.log('Simulation navigateur : ' + checks + ' controles reussis ; ' + cases.length + ' jeux de questions, 12 formes, 4 tailles, QR, fermeture clavier, 5 niveaux et modes nombre/duree dans la consigne.');
   } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
