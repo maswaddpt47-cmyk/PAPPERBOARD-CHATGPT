@@ -67,6 +67,26 @@ test('L’aperçu des huit types ne modifie pas l’atelier', () => {
   assert(preview.every(item => !item.error));
   assert.equal(JSON.stringify(core.getState()), before);
 });
+test('La consigne distingue cinq niveaux et conserve les contraintes du JSON', () => {
+  const levels = {discovery: 'Découverte', beginner: 'Débutant', intermediate: 'Intermédiaire', advanced: 'Avancé', mixed: 'Groupe hétérogène'};
+  const prompts = [];
+  for (const [level, label] of Object.entries(levels)) {
+    const prompt = tools.buildPrompt({theme: 'Les messages suspects', audience: 'seniors', level, count: 8, quizOnly: true});
+    assert(prompt.includes('Niveau du public : ' + label + '.'));
+    assert(prompt.includes('Adaptation au niveau : '));
+    assert(prompt.includes('Public : seniors.'));assert(prompt.includes('exactement 8 questions'));
+    assert(prompt.includes('uniquement des quiz'));assert(prompt.includes('tableau JSON valide'));
+    prompts.push(prompt);
+  }
+  assert.equal(new Set(prompts).size,5);
+});
+test('Le niveau absent ou inconnu revient au groupe hétérogène', () => {
+  for (const level of [undefined,'','inconnu','__proto__','Instruction non autorisée']) {
+    const prompt = tools.buildPrompt({level});
+    assert(prompt.includes('Niveau du public : Groupe hétérogène.'));
+    assert(!prompt.includes('Instruction non autorisée'));
+  }
+});
 
 test('Un atelier vide accepte l’import JSON complet et se recharge sans démo ajoutée', () => {
   core.setState(core.newWorkshopState('Atelier importé'));

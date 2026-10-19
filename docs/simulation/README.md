@@ -6,6 +6,11 @@ jetons de la charte dans `assets/style.css` par `scripts/packager-simulation.py`
 Ouvrir `simulation.html` à la racine du dépôt, ou sa version GitHub Pages.
 Cliquer sur **Créer un atelier** dans le bandeau en haut, donner un nom, puis
 choisir **Partir d’un atelier vide** ou **Générer ou importer un JSON**.
+19/10/2026 — mesuré : la génération propose un menu **Niveau du public**,
+distinct du type de public : **Groupe hétérogène** (par défaut), **Découverte**,
+**Débutant**, **Intermédiaire**, **Avancé**. Le choix et ses consignes pédagogiques
+sont inclus dans le texte copié à l’IA pour adapter vocabulaire, difficulté et
+guidage. Aucun champ n’est ajouté au format JSON d’import ou aux participants.
 Dans le parcours JSON, copier une consigne pour une IA, coller sa réponse,
 choisir un fichier ou charger un exemple, puis vérifier l’aperçu et cliquer
 sur **Créer l’atelier**. Aucun nouvel atelier n’est enregistré avant cette
@@ -79,7 +84,7 @@ en simulation. Points, mur, post-it et gommettes restent des aperçus de galerie
 Le lien « Voir tous les graphes » ouvre aussi la galerie des rendus réels.
 
 19/10/2026 — mesuré : `node docs/simulation/qa.cjs` passe ses 45 scénarios et
-`node docs/simulation/qa-preparation.cjs` ses 16 scénarios. Création vide,
+`node docs/simulation/qa-preparation.cjs` ses 18 scénarios. Création vide,
 conservation/réouverture des ateliers, annulation, création à partir de JSON,
 échec d’enregistrement avec réessai, duplication, archivage/restauration,
 suppression et import dans un atelier vide sont contrôlés.
@@ -97,5 +102,6 @@ Reconstruction : `python3 scripts/packager-simulation.py`.
 est exécuté par `.github/workflows/simulation-ui.yml`, avec Playwright et Chrome.
 Il mesure le contenu visible des questions et des douze formes de la galerie
 à 1920×1080, 1280×720, 1024×768 et 390×844 ; il contrôle aussi le redimensionnement,
-le plein écran, le QR agrandi, les fermetures et le focus. Les résultats sont
+le plein écran, le QR agrandi, les fermetures, le focus et les cinq niveaux copiés
+dans la consigne. Les résultats sont
 dans GitHub Actions ; Chromium reste bloqué dans l’environnement local.

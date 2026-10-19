@@ -84,10 +84,16 @@ async function fits(page, label) {
       await projection.locator('[data-action="projection-home"]').click();
     }
     await projection.setViewportSize({width: 1280, height: 720});
-    await present(cases[3], true);
+    await present(manyChoices, true);
     const firstScale = (await fits(projection, 'avant mises a jour')).scale;
-    for (let index = 0; index < 4; index++) await present(cases[3], true);
-    check((await fits(projection, 'apres mises a jour')).scale === firstScale, 'Les mises a jour reduisent cumulativement le contenu');
+    check(firstScale < 1, 'Le cas de regression doit necessiter une reduction');
+    for (let index = 1; index <= 4; index++) {
+      const counts = [...manyChoices.counts]; counts[0] += index;
+      await present({...manyChoices, counts, responses: manyChoices.responses + index}, true);
+    }
+    const updatedScale = (await fits(projection, 'apres mises a jour')).scale;
+    await projection.reload();
+    check(Math.abs((await fits(projection, 'rechargement apres mises a jour')).scale - updatedScale) < 0.000001, 'Les mises a jour reduisent cumulativement le contenu');
     await projection.setViewportSize({width: 1920, height: 1080});
     await fits(projection, 'redimensionnement sans rechargement');
     await projection.getByRole('button', {name: 'Plein écran', exact: true}).click();
@@ -123,7 +129,25 @@ async function fits(page, label) {
     await animateur.locator('[data-action="zoom-qr"]').click();
     check(await animateur.getByRole('dialog').isVisible(), 'Le QR de Pilotage ne peut plus etre agrandi');
     await animateur.keyboard.press('Escape');
+    const beforeCreation = await animateur.evaluate(() => localStorage.getItem('wl_sandbox_v3'));
+    await animateur.locator('[data-action="create-workshop"]').first().click();
+    await animateur.getByLabel('Nom de l’atelier').fill('Atelier des niveaux');
+    await animateur.locator('input[name="source"][value="json"]').check();
+    await animateur.getByRole('button', {name: 'Continuer', exact: true}).click();
+    const levelSelect = animateur.getByLabel('Niveau du public', {exact: true});
+    check(await levelSelect.inputValue() === 'mixed', 'Le niveau par defaut est incorrect');
+    check(await levelSelect.locator('option').count() === 5, 'Le menu doit proposer cinq niveaux');
+    await animateur.getByLabel('Public', {exact: true}).selectOption('seniors');
+    for (const [level, label] of Object.entries({mixed: 'Groupe hétérogène', discovery: 'Découverte', beginner: 'Débutant', intermediate: 'Intermédiaire', advanced: 'Avancé'})) {
+      await levelSelect.selectOption(level);
+      await animateur.getByRole('button', {name: 'Copier la consigne pour l’IA', exact: true}).click();
+      const prompt = await animateur.locator('#prep-prompt-output').inputValue();
+      check(prompt.includes('Niveau du public : ' + label + '.'), 'Le niveau choisi n’est pas copie : ' + level);
+      check(prompt.includes('Public : seniors.'), 'Le niveau remplace le type de public');
+    }
+    await animateur.getByRole('button', {name: 'Annuler la création', exact: true}).click();
+    check(await animateur.evaluate(() => localStorage.getItem('wl_sandbox_v3')) === beforeCreation, 'La preparation de consigne modifie l’atelier actif');
     check(errors.length === 0, 'Erreurs JavaScript : ' + errors.join(' | '));
-    console.log('Simulation navigateur : ' + checks + ' controles reussis ; ' + cases.length + ' jeux de questions, 12 formes, 4 tailles, QR et fermeture clavier.');
+    console.log('Simulation navigateur : ' + checks + ' controles reussis ; ' + cases.length + ' jeux de questions, 12 formes, 4 tailles, QR, fermeture clavier et 5 niveaux dans la consigne.');
   } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
