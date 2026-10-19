@@ -49,6 +49,19 @@ h1, h2, h3, .brand-word, .metric-number { font-family: var(--wl-police-titre); }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-color: var(--wl-focus); }
 #current-question { scroll-margin-top: 1rem; }
 .empty-workshop-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+.workshop-methods { border: 0; margin: 1.25rem 0; padding: 0; display: grid; gap: .75rem; min-width: 0; }
+.workshop-method { display: flex; align-items: flex-start; gap: .75rem; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--card); cursor: pointer; }
+.workshop-method:has(input:checked) { border-color: var(--teal); background: var(--teal-light); }
+.workshop-method input { margin-top: .25rem; accent-color: var(--teal); flex-shrink: 0; }
+.workshop-method strong, .workshop-method small { display: block; }
+.workshop-method small { color: var(--muted); line-height: 1.6; margin-top: .3rem; }
+.workshop-group { margin-bottom: 1.25rem; }
+.workshop-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+.workshop-row-actions .btn { min-height: 44px; }
+.workshop-empty { padding: 1rem 1.5rem; }
+.archive-notice { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1.25rem; padding: 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+.archive-notice p { flex: 1; min-width: 12rem; margin: 0; }
+@media(max-width:959px) { .workshop-row { flex-wrap: wrap; } .workshop-row-actions { flex-basis: 100%; justify-content: flex-start; } }
 .question-navigation.toolbar-nav { margin: 0; padding: 1rem 1.25rem; gap: .5rem; background: var(--bg); border-bottom: 1px solid var(--border); }
 .question-navigation .btn { min-height: 44px; }
 .projection-modal[open] { display: flex; flex-direction: column; overflow: hidden; }
@@ -57,5 +70,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .projection-navigation .btn { min-height: 44px; }
 .projection-modal > .modal-body { min-height: 0; overflow: auto; padding: 0; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .projection-preview, .result-gallery-preview { min-height: 0; }
+.projection-mode .sidebar, .projection-mode .topbar, .projection-mode .simulation-notice, .projection-mode .app-footer, .projection-mode .skip-link { display: none; }
+.projection-mode .main-shell { margin: 0; min-height: 100dvh; }
+.projection-mode .workspace { margin: 0; padding: 0; max-width: none; width: 100%; }
+.projection-screen { width: 100%; max-width: none; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; border-radius: 0; }
+.projection-screen .modal-head { flex-wrap: wrap; }
+.projection-screen .modal-head h1 { margin: 0; font-size: clamp(17px, 1.5vw, 24px); color: var(--wl-texte); }
+.projection-window-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.projection-window-actions .btn { min-height: 44px; }
+.projection-screen > .modal-body { flex: 1; }
+.projection-screen h3, .projection-screen .answer-text { overflow-wrap: anywhere; }
 @media(max-width:639px) { .simulation-notice { padding: 1rem; gap: .5rem; } .simulation-notice span { flex-basis: 100%; } }
 @media print { .simulation-notice { display: none; } }

@@ -12,8 +12,11 @@
   var dialogReturnFocus = null;
   var toastTimer;
   var galleryIndex = 0;
+  var projectionOnly = !!(window.location && new URLSearchParams(window.location.search).get('projection') === '1');
+  var projectionGallery = false;
   var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   var preparationTools = null;
+  var creationDraft = null;
   var participantDevices = Object.create(null);
   var supportedTypes = ['poll', 'mcq', 'yesno', 'truefalse', 'scale', 'steps', 'text', 'wordcloud'];
   function isQuiz(q) { return ['mcq', 'yesno', 'truefalse'].indexOf(q.type) !== -1; }
@@ -89,6 +92,7 @@
   function validState(value) {
     function integer(number, min, max) { return Number.isInteger(number) && number >= min && number <= max; }
     function text(string, min, max) { return typeof string === 'string' && string.length >= min && string.length <= max; }
+    if (value && ((value.archived !== undefined && typeof value.archived !== 'boolean') || (value.placeholder !== undefined && typeof value.placeholder !== 'boolean'))) return false;
     if (!value || value.version !== 1 || !text(value.title, 1, 120) || !text(value.conclusion === undefined ? '' : value.conclusion, 0, 600) || value.capacity !== 18 || !integer(value.participants, 0, 18) || !integer(value.helpCount, 0, 18) || typeof value.ended !== 'boolean' || typeof value.anonymousPublished !== 'boolean' || !Array.isArray(value.questions) || value.questions.length > 50 || !integer(value.current, 0, Math.max(0, value.questions.length - 1))) return false;
     var ids = new Set();
     return value.questions.every(function (q) {
@@ -122,14 +126,49 @@
   function switchWorkshop(next) {
     var previous = state;
     var snapshot = JSON.parse(JSON.stringify(previous));
-    var saved = [snapshot].concat(savedWorkshops.filter(function (entry) { return entry.workshopId !== snapshot.workshopId; }));
-    try { localStorage.setItem(WORKSHOPS_KEY, JSON.stringify(saved)); }
-    catch (error) { return false; }
-    savedWorkshops = saved;
+    var saved = previous.placeholder ? savedWorkshops : [snapshot].concat(savedWorkshops.filter(function (entry) { return entry.workshopId !== snapshot.workshopId; }));
+    if (!persistSavedWorkshops(saved)) return false;
     if (!next.workshopId) next.workshopId = makeId();
     state = next;
     if (!save()) { state = previous; return false; }
     participantDevices = Object.create(null);
+    return true;
+  }
+  function persistSavedWorkshops(entries) {
+    try { localStorage.setItem(WORKSHOPS_KEY, JSON.stringify(entries)); savedWorkshops = entries; return true; }
+    catch (error) { return false; }
+  }
+  function allWorkshops() {
+    return (state.placeholder ? [] : [state]).concat(savedWorkshops.filter(function (entry) { return !entry.placeholder && entry.workshopId !== state.workshopId; }));
+  }
+  function duplicateWorkshop(source) {
+    var copy = JSON.parse(JSON.stringify(source));
+    copy.workshopId = makeId(); copy.title = ('Copie de ' + source.title).slice(0, 120);
+    copy.libraryId = 'custom'; copy.current = 0; copy.participants = 0;
+    copy.ended = false; copy.archived = false; copy.helpCount = 0;
+    copy.anonymousPublished = false; copy.anonymousAnswered = false;
+    copy.questions.forEach(function (q) { q.id = makeId(); q.counts = q.options.map(function () { return 0; }); q.texts = []; q.responses = 0; q.state = 'draft'; q.published = false; });
+    return switchWorkshop(copy);
+  }
+  function setWorkshopArchived(source, archived) {
+    var next = JSON.parse(JSON.stringify(source)); next.archived = archived;
+    if (source.workshopId === state.workshopId) {
+      var previous = state; state = next;
+      if (!save()) { state = previous; return false; }
+      return true;
+    }
+    next.updated = new Date().toISOString();
+    return persistSavedWorkshops(savedWorkshops.map(function (entry) { return entry.workshopId === next.workshopId ? next : entry; }));
+  }
+  function deleteWorkshop(source) {
+    var remaining = allWorkshops().filter(function (entry) { return entry.workshopId !== source.workshopId; });
+    if (!persistSavedWorkshops(remaining)) return false;
+    if (source.workshopId !== state.workshopId) return true;
+    var previous = state;
+    var replacement = remaining.find(function (entry) { return !entry.archived; }) || remaining[0];
+    state = replacement ? JSON.parse(JSON.stringify(replacement)) : newWorkshopState('Aucun atelier');
+    if (!replacement) state.placeholder = true;
+    if (!save()) { state = previous; return false; }
     return true;
   }
 
@@ -156,6 +195,11 @@
   }
 
   function render() {
+    if (projectionOnly) {
+      document.body.classList.add('projection-mode');
+      if (projectionGallery) resultGallery(); else projection();
+      return;
+    }
     var focusedBeforeRender = captureFocus();
     document.querySelectorAll('[data-nav]').forEach(function (node) {
       var on = node.dataset.nav === activeView;
@@ -172,11 +216,13 @@
   }
 
   function renderWorkshop() {
+    if (state.placeholder) { renderNoWorkshop(); return; }
+    if (state.archived) activeTab = 'recap';
     var subtitle = badge(state.libraryId === 'custom' ? 'Atelier personnalisé' : 'Atelier de démonstration', 'neutral') + ' <span class="heading-detail">Essai local · ' + state.questions.length + ' questions</span>';
     workspace.innerHTML = heading('VOTRE ATELIER', state.title, subtitle,
-      button('participant', 'Aperçu participant', 'phone', 'secondary', isDisabled(!state.questions.length)) + button('result-gallery', 'Galerie des résultats', 'chart', 'secondary') + button('projection', 'Ouvrir la projection', 'screen', 'primary', isDisabled(!state.questions.length))) +
-      '<div class="view-tabs" role="tablist" aria-label="Étapes de l’atelier">' + [['prep', 'Préparer', 'list'], ['live', 'Animer', 'play'], ['recap', 'Bilan', 'chart']].map(function (tab) {
-        return '<button type="button" role="tab" id="tab-' + tab[0] + '" class="tab' + (activeTab === tab[0] ? ' active' : '') + '" aria-selected="' + (activeTab === tab[0]) + '" aria-controls="workshop-panel" tabindex="' + (activeTab === tab[0] ? '0' : '-1') + '" data-action="tab" data-tab="' + tab[0] + '">' + ico(tab[2]) + tab[1] + '</button>';
+      button('participant', 'Aperçu participant', 'phone', 'secondary', isDisabled(!state.questions.length || state.archived)) + button('result-gallery', 'Galerie des résultats', 'chart', 'secondary') + projectionLink()) +
+      (state.archived ? '<div class="archive-notice"><p>Cet atelier est archivé. Son bilan reste consultable ; restaurez-le pour le modifier ou l’animer.</p>' + button('restore-workshop', 'Restaurer l’atelier', 'refresh', 'secondary small', 'data-id="' + esc(state.workshopId) + '"') + '</div>' : '') + '<div class="view-tabs" role="tablist" aria-label="Étapes de l’atelier">' + [['prep', 'Préparer', 'list'], ['live', 'Animer', 'play'], ['recap', 'Bilan', 'chart']].map(function (tab) {
+        return '<button type="button" role="tab" id="tab-' + tab[0] + '" class="tab' + (activeTab === tab[0] ? ' active' : '') + '" aria-selected="' + (activeTab === tab[0]) + '" aria-controls="workshop-panel" tabindex="' + (activeTab === tab[0] ? '0' : '-1') + '" data-action="tab" data-tab="' + tab[0] + '" ' + isDisabled(state.archived && tab[0] !== 'recap') + '>' + ico(tab[2]) + tab[1] + '</button>';
       }).join('') + '</div><div id="workshop-panel" role="tabpanel" aria-labelledby="tab-' + activeTab + '">' + (activeTab === 'prep' ? preparation() : activeTab === 'recap' ? recap() : live()) + '</div>';
   }
 
@@ -218,7 +264,7 @@
 
   function live() {
     var q = current();
-    if (!q) return '<section class="panel empty-state"><h2>Aucune question pour le moment</h2><p>Ajoutez votre première question ou importez votre liste JSON avant de lancer l’animation.</p><div class="empty-workshop-actions">' + button('add-question', 'Ajouter une question', 'plus', 'primary') + button('prep-import', 'Générer ou importer un JSON', 'sparkles', 'secondary') + '</div></section>';
+    if (!q) return '<section class="panel empty-state"><h2>Aucune question pour le moment</h2><p>Ajoutez votre première question pour lancer l’animation.</p><div class="empty-workshop-actions">' + button('add-question', 'Ajouter une question', 'plus', 'primary') + '</div></section>';
     var complete = q.responses >= state.capacity;
     return '<div class="workbench">' + rail() + '<section class="panel current-panel" id="current-question"><nav class="toolbar-nav question-navigation" aria-label="Navigation entre les questions">' + button('previous', 'Précédente', 'arrow-left', 'ghost small', isDisabled(state.current === 0)) + '<span class="muted">' + (state.current + 1) + ' / ' + state.questions.length + '</span>' + button('next', 'Suivante', 'arrow-right', 'secondary small', isDisabled(state.current === state.questions.length - 1)) + '</nav><div class="question-topline">' + badge('Question ' + (state.current + 1) + ' sur ' + state.questions.length, 'neutral') + badge(state.ended ? 'Atelier terminé' : stateLabel(q), q.state === 'open' && !state.ended ? 'green' : 'neutral') + '<span class="question-type">' + esc(typeLabel(q)) + '</span></div><h2 class="question-title">' + esc(q.title) + '</h2><p class="question-description">' + esc(q.description) + '</p><div class="result-explainer"><span>' + ico('chart') + ' Vue animateur</span><span>' + (q.published ? ico('eye') + ' Résultats visibles par les participants' : ico('eye-off') + ' Résultats masqués aux participants') + '</span></div>' + answers(q, false) +
       '<div class="live-toolbar"><div class="toolbar-main">' + button('toggle-vote', q.state === 'open' ? 'Fermer le vote' : 'Ouvrir le vote', q.state === 'open' ? 'pause' : 'play', 'primary', isDisabled(state.ended)) + button('toggle-results', q.published ? 'Masquer les résultats' : 'Afficher les résultats', q.published ? 'eye-off' : 'eye', 'secondary') + '</div></div><div class="simulation-row"><span>' + ico('sparkles') + ' Essayez l’atelier avec des réponses fictives.</span>' + button('simulate', complete ? 'Toutes les réponses reçues' : 'Simuler une réponse', 'plus', 'ghost small', isDisabled(complete || q.state !== 'open' || state.ended)) + '</div></section>' +
@@ -271,7 +317,7 @@
     return '<section class="panel conclusion-card"><div class="section-heading"><div><p class="eyebrow">LE MESSAGE À EMPORTER</p><h2>Conclusion de l’atelier</h2><p class="muted">Affichée sur la projection et dans l’aperçu participant quand vous terminez l’atelier. Également reprise dans le mémo.</p></div>' + ico('book') + '</div><label class="field-label" for="conclusion-text">À retenir</label><textarea class="textarea" id="conclusion-text" rows="4" maxlength="600" placeholder="Les idées à retenir, en quelques phrases…">' + esc(state.conclusion || '') + '</textarea><div class="conclusion-actions">' + button('save-conclusion', 'Enregistrer la conclusion', 'check', 'primary') + '<span class="muted" id="conclusion-status" role="status">600 caractères maximum</span></div></section>';
   }
   function preparation() {
-    return '<section class="panel preparation-panel"><div class="section-heading"><div><h2 class="panel-title">Le déroulé de votre atelier</h2><p class="muted">Préparez vos questions ici. Le vote se lance depuis Animer.</p></div><div class="preparation-actions">' + button('add-question', state.questions.length >= 50 ? '50 questions maximum' : 'Ajouter une question', 'plus', 'primary', isDisabled(state.questions.length >= 50)) + button('prep-import', 'Générer ou importer un JSON', 'sparkles', 'secondary') + '</div></div>' + (!state.questions.length ? '<div class="empty-state"><h3>Votre atelier est vide</h3><p>Commencez avec les boutons ci-dessus : ajoutez une question, préparez une consigne pour l’IA ou importez un fichier JSON.</p></div>' : '') + '<ol class="prep-list">' + state.questions.map(function (q, index) {
+    return '<section class="panel preparation-panel"><div class="section-heading"><div><h2 class="panel-title">Le déroulé de votre atelier</h2><p class="muted">Préparez vos questions ici. Le vote se lance depuis Animer.</p></div><div class="preparation-actions">' + button('add-question', state.questions.length >= 50 ? '50 questions maximum' : 'Ajouter une question', 'plus', 'primary', isDisabled(state.questions.length >= 50)) + '</div></div>' + (!state.questions.length ? '<div class="empty-state"><h3>Votre atelier est vide</h3><p>Cliquez sur « Ajouter une question » pour commencer à préparer votre atelier.</p></div>' : '') + '<ol class="prep-list">' + state.questions.map(function (q, index) {
       return '<li class="prep-item"><span class="number-bubble">' + (index + 1) + '</span><div class="grow"><h3>' + esc(q.title) + '</h3><p class="muted">' + esc(typeLabel(q)) + ' · ' + q.responses + ' réponse' + (q.responses > 1 ? 's' : '') + '</p></div><div class="prep-actions">' + button('move-up', '<span class="sr-only">Monter la question ' + (index + 1) + '</span>', 'arrow-up', 'ghost icon-btn', 'data-index="' + index + '" aria-label="Monter la question ' + (index + 1) + '" ' + isDisabled(index === 0)) + button('move-down', '<span class="sr-only">Descendre la question ' + (index + 1) + '</span>', 'arrow-down', 'ghost icon-btn', 'data-index="' + index + '" aria-label="Descendre la question ' + (index + 1) + '" ' + isDisabled(index === state.questions.length - 1)) + button('edit-question', 'Modifier', 'edit', 'secondary small', 'data-index="' + index + '"') + button('delete-question', '<span class="sr-only">Supprimer la question ' + (index + 1) + '</span>', 'trash', 'ghost icon-btn', 'data-index="' + index + '" aria-label="Supprimer la question ' + (index + 1) + '" ' + isDisabled(state.questions.length === 1)) + '</div></li>';
     }).join('') + '</ol><div class="info-note">' + ico('book') + ' Les changements sont enregistrés uniquement dans cet essai local.</div></section><div class="section-heading"><div><h2>Des séquences prêtes à ajouter</h2><p class="muted">Un accueil, un geste pratique, une dernière parole : composez le rythme de votre atelier.</p></div></div><div class="quick-grid">' +
       quickInsertCard('ice', 'Brise-glace', 'Pour accueillir le groupe. La question est ajoutée en premier.', [['meteo', 'Votre météo du jour'], ['energie', 'Votre énergie de 1 à 5'], ['mot', 'Un mot pour vous décrire']], 'Ajouter en premier', 'sparkles') +
@@ -287,6 +333,7 @@
   }
 
   function renderOverview() {
+    if (state.placeholder) { renderNoWorkshop(); return; }
     var done = state.questions.filter(function (q) { return q.responses > 0; }).length;
     workspace.innerHTML = heading('VOTRE ESPACE', 'Un atelier, des échanges.', 'Préparez simplement. Gardez le contact avec votre groupe.', button('create-workshop', 'Créer un atelier', 'plus', 'primary') + button('open-workshop', 'Reprendre l’atelier', 'arrow-right', 'secondary')) +
       '<div class="card-grid"><section class="panel content-card session-summary"><div class="question-topline">' + badge(state.ended ? 'Terminé' : 'En cours', state.ended ? 'neutral' : 'green') + badge('Démonstration', 'neutral') + '</div><h2>' + esc(state.title) + '</h2><p class="muted">Un espace pour expérimenter, sans lancer de vraie session.</p><div class="library-meta"><span>' + ico('users') + ' 18 participants fictifs</span><span>' + ico('list') + ' ' + state.questions.length + ' questions</span></div>' + button('open-workshop', 'Revenir à l’animation', 'play', 'primary') + '</section><section class="panel content-card"><p class="eyebrow">VOTRE PROGRESSION</p><div class="metric-number">' + done + '<span> / ' + state.questions.length + '</span></div><h2>questions explorées</h2><p class="muted">Simulez des votes, regardez l’écran participant et retrouvez les résultats dans le bilan.</p>' + button('help', 'Comment essayer ?', 'help', 'ghost') + '</section></div><div class="section-heading"><div><h2 class="panel-title">Une idée pour le prochain atelier ?</h2><p class="muted">Trois séances d’essai, prêtes à personnaliser.</p></div>' + button('open-library', 'Explorer la bibliothèque', 'arrow-right', 'ghost') + '</div><div class="card-grid">' + library.slice(1).map(libraryCard).join('') + '</div>';
@@ -295,22 +342,34 @@
     return '<article class="panel content-card"><div class="question-topline">' + badge(esc(item.category), item.color) + '</div><h2>' + esc(item.title) + '</h2><p class="muted">' + esc(item.description) + '</p><div class="library-meta"><span>' + ico('clock') + ' ' + item.duration + '</span><span>' + ico('list') + ' 6 questions</span></div>' + button('load-library', 'Essayer cette séance', 'plus', 'secondary', 'data-id="' + item.id + '"') + '</article>';
   }
   function renderLibrary() {
-    workspace.innerHTML = heading('POUR VOUS INSPIRER', 'La bibliothèque', 'Des points de départ concrets. Chaque séance se charge dans votre espace d’essai.', '') + '<div class="card-grid library-grid">' + library.map(libraryCard).join('') + '</div><p class="info-note">' + ico('sparkles') + ' Toutes les séances sont des démonstrations. Relisez et adaptez les contenus avant un véritable atelier.</p>';
+    workspace.innerHTML = heading('POUR VOUS INSPIRER', 'Bibliothèque de modèles', 'Des modèles de démonstration pour démarrer un nouvel atelier. Vos créations et leurs archives restent dans Mes ateliers.', '') + '<div class="card-grid library-grid">' + library.map(libraryCard).join('') + '</div><p class="info-note">' + ico('sparkles') + ' Toutes les séances sont des démonstrations. Relisez et adaptez les contenus avant un véritable atelier.</p>';
   }
   function renderHistory() {
-    var entries = [state].concat(savedWorkshops.filter(function (entry) { return entry.workshopId !== state.workshopId; }));
-    workspace.innerHTML = heading('VOS ESSAIS', 'Mes ateliers', 'Vos ateliers conservés dans ce navigateur.', button('create-workshop', 'Créer un atelier', 'plus', 'primary')) + '<section class="panel"><div class="panel-head"><h2 class="panel-title">Ateliers de ce navigateur</h2>' + badge('Essais locaux', 'neutral') + '</div><div class="history-list">' + entries.map(function (entry) {
-      var active = entry.workshopId === state.workshopId;
-      return '<div class="prep-item"><span class="number-bubble">' + ico('book') + '</span><div class="grow"><h3>' + esc(entry.title) + '</h3><p class="muted">' + entry.questions.length + ' question' + (entry.questions.length > 1 ? 's' : '') + ' · ' + (active ? 'Atelier actuel' : entry.ended ? 'Terminé' : 'En préparation') + '</p></div>' + (active ? button('go-prep', 'Préparer', 'edit', 'secondary small') : button('open-saved-workshop', 'Ouvrir', 'arrow-right', 'secondary small', 'data-id="' + esc(entry.workshopId) + '"')) + '</div>';
-    }).join('') + '</div></section><p class="info-note">Ces ateliers sont des essais locaux. Ils restent sur cet appareil et ne sont pas partagés avec d’autres participants.</p>';
+    var entries = allWorkshops();
+    var active = entries.filter(function (entry) { return !entry.archived; });
+    var archived = entries.filter(function (entry) { return entry.archived; });
+    workspace.innerHTML = heading('VOS ESSAIS', 'Mes ateliers', 'Vos créations, leurs résultats et leurs archives dans ce navigateur.', button('create-workshop', 'Créer un atelier', 'plus', 'primary')) + workshopGroup('Ateliers en cours', active) + workshopGroup('Ateliers archivés', archived) + '<p class="info-note">Archiver conserve les questions et les résultats. La bibliothèque de modèles propose des séances de démonstration pour créer un nouvel atelier.</p>';
+  }
+  function workshopGroup(title, entries) {
+    return '<section class="panel workshop-group"><div class="panel-head"><h2 class="panel-title">' + title + '</h2><span class="muted">' + entries.length + '</span></div><div class="history-list">' + (entries.length ? entries.map(workshopRow).join('') : '<p class="workshop-empty muted">Aucun atelier dans cette section.</p>') + '</div></section>';
+  }
+  function workshopRow(entry) {
+    var active = entry.workshopId === state.workshopId;
+    var attrs = 'data-id="' + esc(entry.workshopId) + '"';
+    var open = active ? button('go-prep', entry.archived ? 'Voir le bilan' : 'Préparer', entry.archived ? 'chart' : 'edit', 'secondary small') : button('open-saved-workshop', entry.archived ? 'Voir le bilan' : 'Ouvrir', 'arrow-right', 'secondary small', attrs);
+    return '<div class="prep-item workshop-row"><span class="number-bubble">' + ico('book') + '</span><div class="grow"><h3>' + esc(entry.title) + '</h3><p class="muted">' + entry.questions.length + ' question' + (entry.questions.length > 1 ? 's' : '') + ' · ' + (entry.archived ? 'Archivé' : active ? 'Atelier actuel' : entry.ended ? 'Terminé' : 'En préparation') + '</p></div><div class="workshop-row-actions">' + open + button('duplicate-workshop', 'Dupliquer', 'copy', 'secondary small', attrs) + button(entry.archived ? 'restore-workshop' : 'archive-workshop', entry.archived ? 'Restaurer' : 'Archiver', entry.archived ? 'refresh' : 'book', 'secondary small', attrs) + button('delete-workshop', 'Supprimer', 'trash', 'danger small', attrs) + '</div></div>';
+  }
+  function renderNoWorkshop() {
+    workspace.innerHTML = heading('VOTRE ESPACE', 'Aucun atelier pour le moment', 'Créez un atelier vide, générez ou importez un JSON, ou partez d’un modèle.', button('create-workshop', 'Créer un atelier', 'plus', 'primary')) + '<section class="panel empty-state"><h2>À vous de préparer le prochain atelier</h2><p>Vos futurs ateliers et leurs archives apparaîtront dans « Mes ateliers ».</p>' + button('open-library', 'Voir les modèles', 'book', 'secondary') + '</section>';
   }
 
   function createWorkshop() {
-    showDialog('Créer un atelier', '<form id="workshop-form"><p>Commencez avec un atelier vide, puis ajoutez vos questions ou importez un JSON. Votre atelier actuel sera conservé dans « Mes ateliers ».</p><div class="form-field"><label class="field-label" for="workshop-title">Nom de l’atelier</label><input class="input" id="workshop-title" name="title" maxlength="120" required placeholder="Ex. Bien protéger ses comptes"></div><p class="generator-note">Ce nouvel atelier est un essai enregistré dans ce navigateur.</p><p id="workshop-error" class="form-error" role="alert"></p><div class="modal-actions">' + button('close-dialog', 'Annuler', '', 'secondary') + '<button type="submit" class="btn primary">' + ico('plus') + ' Créer l’atelier</button></div></form>', '', 'create-workshop');
+    creationDraft = null;
+    showDialog('Créer un atelier', '<form id="workshop-form"><p>Donnez un nom à votre atelier et choisissez comment le préparer.</p><div class="form-field"><label class="field-label" for="workshop-title">Nom de l’atelier</label><input class="input" id="workshop-title" name="title" maxlength="120" required placeholder="Ex. Bien protéger ses comptes"></div><fieldset class="workshop-methods"><legend class="field-label">Comment commencer ?</legend><label class="workshop-method"><input type="radio" name="source" value="empty" checked><span><strong>Partir d’un atelier vide</strong><small>Ajouter vos questions une à une.</small></span></label><label class="workshop-method"><input type="radio" name="source" value="json"><span><strong>Générer ou importer un JSON</strong><small>Préparer une consigne pour l’IA, coller sa réponse ou importer un fichier.</small></span></label></fieldset><p class="generator-note">Votre atelier actuel sera conservé dans « Mes ateliers ». Le nouvel atelier reste dans ce navigateur.</p><p id="workshop-error" class="form-error" role="alert"></p><div class="modal-actions">' + button('close-dialog', 'Annuler', '', 'secondary') + '<button type="submit" class="btn primary">' + ico('arrow-right') + ' Continuer</button></div></form>', '', 'create-workshop');
     document.getElementById('workshop-title').focus();
   }
   function showWorkshopPreparation() {
-    closeDialog(); activeView = 'workshop'; activeTab = 'prep'; render();
+    closeDialog(); activeView = 'workshop'; activeTab = state.archived ? 'recap' : 'prep'; render();
     workspace.focus({ preventScroll: true });
     if (typeof workspace.scrollIntoView === 'function') workspace.scrollIntoView({ block: 'start', behavior: 'auto' });
   }
@@ -331,6 +390,7 @@
   function closeDialog(restore) {
     var instance = dialog;
     var returnTo = dialogReturnFocus;
+    if (restore !== false && modalKind === 'preparation-import') creationDraft = null;
     dialog = null; dialogReturnFocus = null; modalKind = '';
     if (instance) { instance.close(); instance.remove(); }
     if (restore !== false) restoreFocus(returnTo);
@@ -384,7 +444,10 @@
   }
   function projection() {
     var q = current();
-    if (!q) { toast('Ajoutez ou importez une question avant d’ouvrir la projection.'); return; }
+    if (!q || state.archived || state.placeholder) {
+      renderProjectionFrame('Projection de l’atelier', '<div class="projection-preview"><h3>' + (state.archived ? 'Cet atelier est archivé' : 'Aucune question à projeter pour le moment') + '</h3><p>Préparez ou ouvrez un atelier depuis l’écran animateur. La projection se mettra à jour automatiquement.</p></div>', button('result-gallery', 'Voir les formes de résultats', 'chart', 'secondary'));
+      return;
+    }
     var hasResponses = q.responses > 0;
     var resultHint = !q.published && hasResponses ? '<div class="projection-result-hint"><span>' + ico('eye-off') + ' Les réponses sont prêtes mais encore masquées.</span><button type="button" class="btn secondary small" data-action="projection-toggle-results">Afficher le graphe</button></div>' : '';
     var projectionContent;
@@ -398,7 +461,21 @@
     }
     var body = '<div class="projection-preview"><div class="projection-meta"><span>WoocLight · ' + esc(state.title) + '</span><span>Question ' + (state.current + 1) + ' / ' + state.questions.length + '</span></div>' + projectionContent + '</div>';
     var projectionResultsButton = q.published ? button('projection-toggle-results', 'Masquer le graphe', 'eye-off', 'secondary small') : (hasResponses ? button('projection-toggle-results', 'Afficher le graphe', 'eye', 'primary small') : '');
-    showDialog('L’écran de votre groupe', body, button('projection-previous', 'Précédente', 'arrow-left', 'ghost', isDisabled(state.current === 0)) + button('projection-next', 'Suivante', 'arrow-right', 'secondary', isDisabled(state.current === state.questions.length - 1)) + projectionResultsButton + button('result-gallery', 'Toutes les formes', 'chart', 'ghost small') + button('close-dialog', 'Quitter la projection', 'close', 'primary'), 'projection');
+    renderProjectionFrame('L’écran de votre groupe', body, button('projection-previous', 'Précédente', 'arrow-left', 'ghost', isDisabled(state.current === 0)) + button('projection-next', 'Suivante', 'arrow-right', 'secondary', isDisabled(state.current === state.questions.length - 1)) + projectionResultsButton + button('result-gallery', 'Toutes les formes', 'chart', 'ghost small'));
+  }
+  function projectionUrl() {
+    if (!window.location) return '?projection=1';
+    var query = new URLSearchParams(window.location.search); query.set('projection', '1');
+    return window.location.pathname + '?' + query.toString();
+  }
+  function projectionLink() {
+    if (!state.questions.length || state.archived) return button('projection', 'Ouvrir la projection', 'screen', 'primary', 'disabled');
+    return '<a class="btn primary" href="' + esc(projectionUrl()) + '" target="_blank" rel="noopener" data-action="projection" aria-label="Ouvrir la projection dans un nouvel onglet">' + ico('screen') + '<span>Ouvrir la projection</span>' + ico('external') + '</a>';
+  }
+  function renderProjectionFrame(title, body, actions) {
+    workspace.innerHTML = '<section class="projection-screen projection-modal"><header class="modal-head"><div><p class="eyebrow">WOOCLIGHT · PROJECTION SIMULÉE</p><h1>' + esc(title) + '</h1></div><div class="projection-window-actions">' + button('projection-fullscreen', document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran', 'screen', 'secondary small') + button('projection-close', 'Fermer la projection', 'close', 'secondary small') + '</div></header><nav class="modal-actions projection-navigation" aria-label="Commandes de la projection">' + actions + '</nav><div class="modal-body">' + body + '</div></section>';
+    var content = workspace.querySelector('.modal-body');
+    if (content) content.scrollTop = 0;
   }
 
   function galleryScaleContent() {
@@ -472,7 +549,9 @@
     galleryIndex = Math.max(0, Math.min(galleryIndex, slides.length - 1));
     var slide = slides[galleryIndex];
     var body = '<div class="result-gallery-preview"><div class="projection-meta"><span>WoocLight · formes de résultats</span><span>Résultat ' + (galleryIndex + 1) + ' / ' + slides.length + '</span></div><div class="gallery-slide-head"><p class="eyebrow">' + esc(slide.label) + '</p><h3>' + esc(slide.title) + '</h3><p class="gallery-description">' + esc(slide.description) + '</p></div><div class="gallery-stage">' + slide.content + '</div><p class="gallery-note">' + esc(slide.note) + '</p></div>';
-    showDialog('Galerie des résultats', body, button('gallery-prev', 'Précédent', 'arrow-left', 'ghost', isDisabled(galleryIndex === 0)) + button('gallery-next', 'Suivant', 'arrow-right', 'secondary', isDisabled(galleryIndex === slides.length - 1)) + button('close-dialog', 'Quitter la galerie', 'close', 'primary'), 'gallery');
+    var actions = button('gallery-prev', 'Précédent', 'arrow-left', 'ghost', isDisabled(galleryIndex === 0)) + button('gallery-next', 'Suivant', 'arrow-right', 'secondary', isDisabled(galleryIndex === slides.length - 1)) + button(projectionOnly ? 'projection-home' : 'close-dialog', projectionOnly ? 'Revenir à la question' : 'Quitter la galerie', 'close', 'primary');
+    if (projectionOnly) renderProjectionFrame('Galerie des résultats', body, actions);
+    else showDialog('Galerie des résultats', body, actions, 'gallery');
   }
 
   function editQuestion(index) {
@@ -557,6 +636,16 @@
     var index = Number(target.dataset.index);
     var q = current();
     if (action === 'create-workshop') { createWorkshop(); return; }
+    if (['duplicate-workshop', 'archive-workshop', 'restore-workshop', 'delete-workshop'].indexOf(action) !== -1) {
+      var managed = allWorkshops().find(function (entry) { return entry.workshopId === target.dataset.id; });
+      if (!managed) return;
+      if (action === 'delete-workshop' && !confirm('Supprimer définitivement l’atelier « ' + managed.title + ' » et ses réponses de ce navigateur ?')) return;
+      var changed = action === 'duplicate-workshop' ? duplicateWorkshop(managed) : action === 'delete-workshop' ? deleteWorkshop(managed) : setWorkshopArchived(managed, action === 'archive-workshop');
+      if (!changed) { toast('Impossible d’enregistrer cette action. Vos ateliers sont conservés.'); return; }
+      if (action === 'duplicate-workshop') showWorkshopPreparation();
+      else { activeView = 'history'; render(); }
+      toast(action === 'duplicate-workshop' ? 'Atelier dupliqué : les questions sont reprises et les votes remis à zéro.' : action === 'delete-workshop' ? 'L’atelier a été supprimé.' : action === 'archive-workshop' ? 'L’atelier est rangé dans « Ateliers archivés ».' : 'L’atelier est restauré.'); return;
+    }
     if (action === 'open-saved-workshop') {
       var saved = savedWorkshops.find(function (entry) { return entry.workshopId === target.dataset.id; });
       if (!saved) return;
@@ -580,8 +669,15 @@
     if (action === 'tab') { activeTab = target.dataset.tab; render(); document.getElementById('tab-' + activeTab).focus(); return; }
     if (action === 'close-dialog') { closeDialog(); return; }
     if (action === 'participant') { participant(); return; }
-    if (action === 'projection') { projection(); return; }
-    if (action === 'result-gallery') { galleryIndex = 0; resultGallery(); return; }
+    if (action === 'projection') { if (!save()) { event.preventDefault(); toast('Impossible d’enregistrer l’atelier pour ouvrir la projection. Réessayez.'); } return; }
+    if (action === 'projection-home') { projectionGallery = false; render(); return; }
+    if (action === 'projection-close') { window.close(); return; }
+    if (action === 'projection-fullscreen') {
+      var full = document.fullscreenElement ? document.exitFullscreen && document.exitFullscreen() : document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      if (full && typeof full.catch === 'function') full.catch(function () { toast('Le navigateur n’a pas pu activer le plein écran.'); });
+      return;
+    }
+    if (action === 'result-gallery') { galleryIndex = 0; projectionGallery = projectionOnly; resultGallery(); return; }
     if (action === 'gallery-prev' || action === 'gallery-next') { galleryIndex += action === 'gallery-next' ? 1 : -1; resultGallery(); return; }
     if (action === 'help') { help(); return; }
     if (action === 'open-workshop') { activeView = 'workshop'; activeTab = 'live'; render(); return; }
@@ -589,8 +685,8 @@
     if (action === 'go-prep') { activeView = 'workshop'; activeTab = 'prep'; render(); return; }
     if (action === 'select-question') { state.current = index; save(); render(); revealCurrentQuestion(); return; }
     if (action === 'previous' || action === 'next') { navigateQuestion(action === 'next' ? 1 : -1); revealCurrentQuestion(); return; }
-    if (action === 'projection-previous' || action === 'projection-next') { navigateQuestion(action === 'projection-next' ? 1 : -1); projection(); return; }
-    if (action === 'projection-toggle-results') { if (q.responses > 0) { q.published = !q.published; save(); projection(); toast(q.published ? 'Le graphe est maintenant visible dans la projection.' : 'Le graphe est masqué dans la projection.'); } return; }
+    if (action === 'projection-previous' || action === 'projection-next') { navigateQuestion(action === 'projection-next' ? 1 : -1); return; }
+    if (action === 'projection-toggle-results') { if (q && !state.archived && q.responses > 0) { q.published = !q.published; save(); render(); toast(q.published ? 'Le graphe est maintenant visible dans la projection.' : 'Le graphe est masqué dans la projection.'); } return; }
     if (action === 'toggle-vote') { q.state = q.state === 'open' ? 'closed' : 'open'; save(); render(); toast(q.state === 'open' ? 'Le vote est ouvert. Vous pouvez simuler une réponse.' : 'Le vote est fermé.'); return; }
     if (action === 'toggle-results') { q.published = !q.published; save(); render(); toast(q.published ? 'Les résultats sont maintenant visibles dans les aperçus.' : 'Les résultats sont masqués aux participants et à la projection.'); return; }
     if (action === 'simulate') {
@@ -644,10 +740,16 @@
   document.addEventListener('submit', function (event) {
     if (event.target.id === 'workshop-form') {
       event.preventDefault();
-      var name = String(new FormData(event.target).get('title') || '').trim();
+      var creationForm = new FormData(event.target);
+      var name = String(creationForm.get('title') || '').trim();
       if (!name || name.length > 120) { document.getElementById('workshop-error').textContent = 'Donnez un nom à l’atelier (120 caractères maximum).'; return; }
+      if (creationForm.get('source') === 'json') {
+        if (!preparationTools) { document.getElementById('workshop-error').textContent = 'L’outil JSON n’a pas pu être chargé. Rechargez la page pour réessayer.'; return; }
+        creationDraft = newWorkshopState(name);
+        preparationTools.open({ creating: true }); return;
+      }
       if (!switchWorkshop(newWorkshopState(name))) { document.getElementById('workshop-error').textContent = 'Impossible d’enregistrer le nouvel atelier dans ce navigateur. Votre atelier actuel est conservé.'; return; }
-      showWorkshopPreparation(); toast('Votre atelier est créé. Ajoutez une question ou cliquez sur « Générer ou importer un JSON ».'); return;
+      showWorkshopPreparation(); toast('Votre atelier est créé. Ajoutez votre première question.'); return;
     }
     if (event.target.id === 'participant-form') {
       event.preventDefault();
@@ -692,14 +794,35 @@
   });
   document.addEventListener('keydown', function (event) {
     if (event.target.getAttribute('role') !== 'tab') return;
-    var order = ['prep', 'live', 'recap'];
+    var order = state.archived ? ['recap'] : ['prep', 'live', 'recap'];
     var offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
     if (!offset && event.key !== 'Home' && event.key !== 'End') return;
     event.preventDefault();
     activeTab = event.key === 'Home' ? 'prep' : event.key === 'End' ? 'recap' : order[(order.indexOf(activeTab) + offset + order.length) % order.length];
     render(); document.getElementById('tab-' + activeTab).focus();
   });
+  document.addEventListener('fullscreenchange', function () { if (projectionOnly) render(); });
+  if (typeof window.addEventListener === 'function') window.addEventListener('storage', function (event) {
+    if (event.key !== STORAGE_KEY || !event.newValue) return;
+    try {
+      var incoming = JSON.parse(event.newValue);
+      if (!validState(incoming)) return;
+      state = incoming;
+      savedWorkshops = readSavedWorkshops();
+      render();
+    } catch (error) { /* Ignore incomplete data from another browser tab. */ }
+  });
 
-  if (window.WLPreparation) preparationTools = window.WLPreparation.create({ getState: function () { return state; }, save: save, render: render, showDialog: function (title, body, actions, kind) { showDialog(title, body, actions, kind); return dialog; }, closeDialog: closeDialog, toast: toast, esc: esc, icon: ico, button: button, makeId: makeId });
+  if (window.WLPreparation) preparationTools = window.WLPreparation.create({
+    getState: function () { return creationDraft || state; },
+    save: function () {
+      if (!creationDraft) return save();
+      if (!switchWorkshop(creationDraft)) return false;
+      creationDraft = null; return true;
+    },
+    render: showWorkshopPreparation,
+    showDialog: function (title, body, actions, kind) { showDialog(title, body, actions, kind); return dialog; },
+    closeDialog: closeDialog, toast: toast, esc: esc, icon: ico, button: button, makeId: makeId
+  });
   render();
 }());

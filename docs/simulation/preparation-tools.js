@@ -190,7 +190,7 @@
 
   function create(hooks) {
     var doc = root.document;
-    var previewItems = null, verifiedRaw = null, revision = 0, opening = 0;
+    var previewItems = null, verifiedRaw = null, revision = 0, opening = 0, creatingWorkshop = false;
     var esc = hooks.esc, icon = hooks.icon, button = hooks.button;
     function element(id) { return doc && doc.getElementById(id); }
     function announce(message) { var target = element('prep-source-status'); if (target) target.textContent = message; }
@@ -200,12 +200,14 @@
       var commit = element('prep-commit'); if (commit) commit.disabled = true;
       announce(message || 'Le contenu a changé. Vérifiez-le pour afficher un nouvel aperçu.');
     }
-    function open() {
+    function open(options) {
+      creatingWorkshop = !!(options && options.creating);
       opening++; previewItems = null; verifiedRaw = null; revision++;
       var state = hooks.getState();
       var body = '<div class="generator-grid"><section class="generator-section"><div class="generator-step"><span class="number-bubble">1</span><div><h3>Préparer une consigne pour une IA</h3><p class="muted">Facultatif si vous avez déjà un fichier à importer.</p></div></div><p class="generator-note">Aucun appel à une IA n’est effectué ici. Copiez la consigne dans l’outil de votre choix, puis revenez avec sa réponse. N’y mettez aucune donnée personnelle.</p><div class="form-field"><label class="field-label" for="prep-theme">Thème de l’atelier</label><input class="input" id="prep-theme" maxlength="200" value="' + esc(state.title) + '"></div><div class="form-grid"><div class="form-field"><label class="field-label" for="prep-audience">Public</label><select class="input" id="prep-audience"><option value="tout public">Tout public</option><option value="seniors débutants">Seniors débutants</option><option value="collégiens">Collégiens</option><option value="agents et professionnels de l’accompagnement">Agents et professionnels</option></select></div><div class="form-field"><label class="field-label" for="prep-count">Nombre de questions</label><input class="input" id="prep-count" type="number" min="1" max="30" value="8"></div></div><label class="check-line"><input id="prep-quiz-only" type="checkbox"> Uniquement des quiz</label><label class="check-line"><input id="prep-multi-quiz" type="checkbox"> Autoriser plusieurs bonnes réponses dans les QCM</label><label class="check-line"><input id="prep-challenge" type="checkbox"> Ajouter un défi pratique à étapes</label><p>' + button('prep-copy-prompt', 'Copier la consigne pour l’IA', 'copy', 'primary') + '</p><p id="prep-prompt-status" class="generator-note" role="status"></p><textarea id="prep-prompt-output" class="textarea prompt-output" rows="7" readonly hidden aria-label="Consigne à copier dans une IA"></textarea></section><section class="generator-section"><div class="generator-step"><span class="number-bubble">2</span><div><h3>Importer et relire les questions</h3><p class="muted">JSON ou réponse d’IA · 60 Ko maximum</p></div></div><div class="import-source"><label class="field-label" for="prep-raw">Collez la réponse de l’IA ou votre liste JSON</label><textarea class="textarea" id="prep-raw" rows="8" placeholder="[{ &quot;type&quot;: &quot;mcq&quot;, &quot;text&quot;: &quot;Votre question…&quot;, … }]" aria-describedby="prep-source-status"></textarea><div class="import-actions"><button class="btn secondary small" type="button" data-action="prep-pick-file">' + icon('download') + ' Importer un fichier</button><input id="prep-file" class="file-input" type="file" accept=".json,.txt,application/json,text/plain" hidden>' + button('prep-example', 'Charger un exemple', 'sparkles', 'ghost small') + '</div><p id="prep-source-status" class="generator-note" role="status">Vos questions existantes seront conservées. La conclusion importée sera proposée à part.</p><p>' + button('prep-verify', 'Vérifier et afficher l’aperçu', 'check-circle', 'secondary') + '</p></div></section></div><div id="prep-preview" class="import-preview" hidden></div>';
-      var actions = button('prep-cancel', 'Fermer', '', 'secondary') + '<button id="prep-commit" type="button" class="btn primary" data-action="prep-commit" disabled>' + icon('plus') + ' Ajouter la sélection</button>';
-      hooks.showDialog('Générer ou importer des questions', body, actions, 'preparation-import');
+      if (creatingWorkshop) body = '<p class="generator-note">Création de « ' + esc(state.title) + ' » : générez ou importez les questions, puis vérifiez la sélection avant de créer l’atelier.</p>' + body.replace('Vos questions existantes seront conservées. La conclusion importée sera proposée à part.', 'Votre atelier actuel reste ouvert tant que le nouvel atelier n’est pas créé.');
+      var actions = button('prep-cancel', creatingWorkshop ? 'Annuler la création' : 'Fermer', '', 'secondary') + '<button id="prep-commit" type="button" class="btn primary" data-action="prep-commit" disabled>' + icon('plus') + (creatingWorkshop ? ' Créer l’atelier' : ' Ajouter la sélection') + '</button>';
+      hooks.showDialog(creatingWorkshop ? 'Créer un atelier — Générer ou importer un JSON' : 'Générer ou importer des questions', body, actions, 'preparation-import');
     }
     function selectionSummary() {
       if (!previewItems) return;
@@ -218,7 +220,7 @@
       var error = element('prep-capacity-error');
       if (error) error.textContent = questions > remaining ? 'Cette sélection dépasse la limite de 50 questions. Décochez ' + (questions - remaining) + ' question(s). Rien ne sera ajouté tant que la sélection dépasse la capacité.' : '';
       var commit = element('prep-commit');
-      if (commit) { commit.disabled = !selected.length || questions > remaining; commit.lastChild.textContent = questions ? ' Ajouter ' + questions + ' question' + (questions > 1 ? 's' : '') + (conclusion ? ' et la conclusion' : '') : ' Enregistrer la conclusion'; }
+      if (commit) { commit.disabled = !selected.length || questions > remaining; commit.lastChild.textContent = creatingWorkshop ? ' Créer l’atelier' : questions ? ' Ajouter ' + questions + ' question' + (questions > 1 ? 's' : '') + (conclusion ? ' et la conclusion' : '') : ' Enregistrer la conclusion'; }
       var selectAll = element('prep-select-all');
       if (selectAll) selectAll.textContent = previewItems.every(function (item) { return item.error || item.selected; }) ? 'Tout désélectionner' : 'Sélectionner tous les éléments valides';
     }
@@ -251,10 +253,16 @@
         ids.add(id); additions[index].q.id = id; ready.push(additions[index].q);
       }
       var conclusion = selected.find(function (item) { return item.conclusion !== undefined; });
+      var previousLength = state.questions.length, previousConclusion = state.conclusion;
       Array.prototype.push.apply(state.questions, ready);
       if (conclusion) state.conclusion = conclusion.conclusion;
-      hooks.save(); hooks.render();
-      return { ok: true, added: ready.length, conclusion: !!conclusion, message: ready.length + ' question' + (ready.length > 1 ? 's' : '') + ' ajoutée' + (ready.length > 1 ? 's' : '') + (conclusion ? ' ; conclusion enregistrée.' : '.') };
+      if (hooks.save() === false) {
+        state.questions.splice(previousLength);
+        if (previousConclusion === undefined) delete state.conclusion; else state.conclusion = previousConclusion;
+        return { ok: false, message: 'Impossible d’enregistrer l’atelier dans ce navigateur. Rien n’a été ajouté ; réessayez.' };
+      }
+      hooks.render();
+      return { ok: true, added: ready.length, conclusion: !!conclusion, message: (creatingWorkshop ? 'Atelier créé : ' : '') + ready.length + ' question' + (ready.length > 1 ? 's' : '') + ' ajoutée' + (ready.length > 1 ? 's' : '') + (conclusion ? ' ; conclusion enregistrée.' : '.') };
     }
     async function copyPrompt() {
       var theme = element('prep-theme'), count = element('prep-count'), status = element('prep-prompt-status');
@@ -278,8 +286,7 @@
       var target = event.target.closest('[data-action]');
       if (!target || target.disabled || target.dataset.action.indexOf('prep-') !== 0) return;
       var action = target.dataset.action;
-      if (action === 'prep-import') open();
-      else if (action === 'prep-pick-file') { var fileInput = element('prep-file'); if (fileInput) fileInput.click(); }
+      if (action === 'prep-pick-file') { var fileInput = element('prep-file'); if (fileInput) fileInput.click(); }
       else if (action === 'prep-cancel') hooks.closeDialog();
       else if (action === 'prep-copy-prompt') copyPrompt();
       else if (action === 'prep-example') example();

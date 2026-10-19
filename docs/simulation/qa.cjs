@@ -6,13 +6,15 @@ const document={activeElement:null,body:element('body'),getElementById(id){if(!e
 document.activeElement=element('start');
 const sandbox={document,window:{icon:()=>'<svg class="icon"></svg>'},localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)},setTimeout:()=>1,clearTimeout(){},confirm:()=>true,Blob,URL:{createObjectURL:()=> 'blob:demo',revokeObjectURL(){}},FormData:class{constructor(form){this.data=form.values}get(k){return this.data[k]??null}},console};
 vm.createContext(sandbox);
+sandbox.window.document=document;
+vm.runInContext(fs.readFileSync(__dirname+'/preparation-tools.js','utf8'),sandbox);
 let source=fs.readFileSync(__dirname+'/app.js','utf8');
-source=source.replace(/\}\(\)\);\s*$/, 'globalThis.__test={state:()=>state,validState,readState,answers,fixture,recordAnswer,render,esc,csvCell,projection,gallerySlides,resultGallery};}());');
+source=source.replace(/\}\(\)\);\s*$/, 'globalThis.__test={state:()=>state,workshops:()=>allWorkshops(),validState,readState,answers,fixture,recordAnswer,render,esc,csvCell,projection,gallerySlides,resultGallery};}());');
 vm.runInContext(source,sandbox);const app=sandbox.__test;
 let tests=0;function test(label,fn){fn();tests++;console.log('OK '+label)}
 function action(name,data={}){const e=element();e.dataset={action:name,...data};e.closest=sel=>sel==='[data-action]'?e:null;(listeners.click||[]).forEach(fn=>fn({target:e}));}
 function submit(form){(listeners.submit||[]).forEach(fn=>fn({target:form,preventDefault(){}}));}
-test('Le prototype ouvre Préparer avec huit questions et les outils de génération',()=>{assert.equal(app.state().questions.length,8);assert.equal(app.state().current,1);assert(elements.get('workspace').innerHTML.includes('Générer ou importer'));action('tab',{tab:'live'});assert(elements.get('workspace').innerHTML.includes('Fermer le vote'));});
+test('Préparer ouvre les huit questions sans proposer un import après création',()=>{assert.equal(app.state().questions.length,8);assert.equal(app.state().current,1);assert(!elements.get('workspace').innerHTML.includes('data-action="prep-import"'));action('tab',{tab:'live'});assert(elements.get('workspace').innerHTML.includes('Fermer le vote'));});
 test('Les graphes Oui/Non et QCM multiples reprennent les réponses fictives',()=>{const fixture=app.fixture('scams');const binary=fixture.questions[6],multi=fixture.questions[7];assert(app.answers(binary,false).includes('donut-chart'));assert(app.answers(binary,false).includes('67 %'));assert(app.answers(multi,false).includes('58 %'));assert(app.answers(multi,false).includes('83 %'));assert.equal((app.answers(multi,false).match(/is-correct/g)||[]).length,2);});
 test('La projection permet de publier puis masquer le graphe',()=>{const q=app.state().questions[1];q.responses=14;q.state='open';q.published=false;app.projection();action('projection-toggle-results');assert.equal(q.published,true);action('projection-toggle-results');assert.equal(q.published,false);});
 test('La galerie couvre chaque forme de graphe et de résultat',()=>{const slides=app.gallerySlides();assert.equal(slides.length,12);assert(slides.some(slide=>slide.label==='Nuage de mots'));assert(slides.some(slide=>slide.label==='Post-it'));assert(slides.some(slide=>slide.label==='Gommettes'));app.resultGallery();action('gallery-next');action('result-gallery');});
@@ -41,7 +43,7 @@ test('Changer de question remet la vue au début, avec les deux sens et la liste
   action('select-question',{index:'4'});assert.equal(app.state().current,4);
   assert.deepEqual(scrolls,['start','start','start']);
 });
-test('Créer un atelier vide conserve le précédent et propose l’import JSON',()=>{
+test('Créer un atelier vide conserve le précédent et passe à l’ajout manuel',()=>{
   action('close-dialog');
   const previous=JSON.parse(JSON.stringify(app.state()));
   action('create-workshop');
@@ -52,7 +54,7 @@ test('Créer un atelier vide conserve le précédent et propose l’import JSON'
   assert.equal(app.readState().title,state.title);
   const saved=JSON.parse(memory.get('wl_sandbox_workshops_v1'));
   assert(saved.some(entry=>entry.title===previous.title&&entry.questions.length===previous.questions.length));
-  assert(elements.get('workspace').innerHTML.includes('Générer ou importer un JSON'));
+  assert(!elements.get('workspace').innerHTML.includes('data-action="prep-import"'));
   action('tab',{tab:'live'});assert(elements.get('workspace').innerHTML.includes('Aucune question'));
   action('participant');action('projection');action('tab',{tab:'recap'});
   action('tab',{tab:'prep'});
@@ -87,5 +89,81 @@ test('Un refus d’enregistrement empêche de remplacer l’atelier actif',()=>{
     assert(elements.get('workshop-error').textContent.includes('enregistrer'));
   }
   sandbox.localStorage.setItem=write;
+});
+test('Annuler la création par JSON ne crée rien et conserve l’atelier actif',()=>{
+  const before=JSON.stringify(app.state()),stored=JSON.stringify([...memory]);
+  action('create-workshop');submit({id:'workshop-form',values:{title:'Brouillon JSON',source:'json'}});
+  assert.equal(JSON.stringify(app.state()),before);assert.equal(JSON.stringify([...memory]),stored);
+  action('prep-cancel');assert.equal(JSON.stringify(app.state()),before);
+  assert.equal(JSON.stringify([...memory]),stored);
+});
+test('Le JSON est vérifié avant de créer le nouvel atelier avec sa sélection',()=>{
+  const before=JSON.stringify(app.state());
+  action('create-workshop');submit({id:'workshop-form',values:{title:'Atelier créé par JSON',source:'json'}});
+  document.getElementById('prep-commit').lastChild={textContent:''};
+  action('prep-example');action('prep-verify');
+  assert.equal(JSON.stringify(app.state()),before);
+  action('prep-commit');
+  assert.equal(app.state().title,'Atelier créé par JSON');assert.equal(app.state().questions.length,2);
+  assert(app.state().conclusion);assert(app.validState(app.readState()));
+  assert(!elements.get('workspace').innerHTML.includes('data-action="prep-import"'));
+});
+test('Un échec de création par JSON permet de réessayer sans doubler les questions',()=>{
+  const before=JSON.stringify(app.state()),write=sandbox.localStorage.setItem;
+  action('create-workshop');submit({id:'workshop-form',values:{title:'JSON après réessai',source:'json'}});
+  action('prep-example');action('prep-verify');
+  sandbox.localStorage.setItem=()=>{throw new Error('quota');};
+  action('prep-commit');assert.equal(JSON.stringify(app.state()),before);
+  sandbox.localStorage.setItem=write;action('prep-commit');
+  assert.equal(app.state().title,'JSON après réessai');assert.equal(app.state().questions.length,2);
+});
+test('Dupliquer conserve le contenu et remet les votes à zéro sans modifier l’original',()=>{
+  const original=app.state();original.questions[0].state='open';app.recordAnswer(original.questions[0],[1],'');original.questions[0].published=true;
+  const before=JSON.parse(JSON.stringify(original));
+  action('duplicate-workshop',{id:original.workshopId});
+  const copy=app.state();assert.notEqual(copy.workshopId,before.workshopId);
+  assert.equal(copy.title,('Copie de '+before.title).slice(0,120));assert.equal(copy.conclusion,before.conclusion);
+  assert.equal(copy.questions.length,before.questions.length);assert.equal(copy.participants,0);
+  copy.questions.forEach((q,i)=>{assert.notEqual(q.id,before.questions[i].id);assert.equal(q.title,before.questions[i].title);assert.equal(q.responses,0);assert(q.counts.every(n=>n===0));assert.equal(q.state,'draft');assert.equal(q.published,false);});
+  assert(app.validState(copy));assert.equal(app.workshops().find(w=>w.workshopId===before.workshopId).questions[0].responses,1);
+});
+test('Archiver conserve les données, ouvre le bilan et permet la restauration',()=>{
+  const id=app.state().workshopId,questions=JSON.stringify(app.state().questions);
+  action('archive-workshop',{id});assert.equal(app.state().archived,true);
+  assert(elements.get('workspace').innerHTML.includes('Ateliers archivés'));
+  action('go-prep');assert(elements.get('workspace').innerHTML.includes('Ce que l’atelier nous apprend'));
+  assert(!elements.get('workspace').innerHTML.includes('data-action="add-question"'));
+  action('restore-workshop',{id});assert.equal(app.state().archived,false);
+  assert.equal(JSON.stringify(app.state().questions),questions);assert(app.validState(app.readState()));
+});
+test('Une archive peut servir de modèle de duplication sans être modifiée',()=>{
+  const id=app.state().workshopId;action('archive-workshop',{id});action('duplicate-workshop',{id});
+  assert.equal(app.state().archived,false);assert.notEqual(app.state().workshopId,id);
+  assert.equal(app.workshops().find(w=>w.workshopId===id).archived,true);
+});
+test('Supprimer un autre atelier exige confirmation et conserve l’atelier actif',()=>{
+  const current=app.state().workshopId,target=app.workshops().find(w=>w.workshopId!==current);
+  sandbox.confirm=()=>false;action('delete-workshop',{id:target.workshopId});assert(app.workshops().some(w=>w.workshopId===target.workshopId));
+  sandbox.confirm=()=>true;action('delete-workshop',{id:target.workshopId});
+  assert(!app.workshops().some(w=>w.workshopId===target.workshopId));assert.equal(app.state().workshopId,current);
+  assert(!JSON.parse(memory.get('wl_sandbox_workshops_v1')).some(w=>w.workshopId===target.workshopId));
+});
+test('Supprimer l’atelier actif ouvre un atelier restant et préserve les autres',()=>{
+  const id=app.state().workshopId,remaining=app.workshops().filter(w=>w.workshopId!==id).map(w=>w.workshopId).sort();
+  action('delete-workshop',{id});assert.notEqual(app.state().workshopId,id);
+  assert.deepEqual(app.workshops().map(w=>w.workshopId).sort(),remaining);assert(app.validState(app.readState()));
+});
+test('Un échec d’enregistrement empêche les actions de gestion de modifier les ateliers',()=>{
+  const before=JSON.stringify(app.workshops()),write=sandbox.localStorage.setItem,id=app.state().workshopId;
+  sandbox.localStorage.setItem=()=>{throw new Error('quota');};
+  for(const name of ['archive-workshop','restore-workshop','duplicate-workshop','delete-workshop']){action(name,{id});assert.equal(JSON.stringify(app.workshops()),before);}
+  sandbox.localStorage.setItem=write;
+});
+test('Supprimer le dernier atelier laisse une liste vide et permet une nouvelle création',()=>{
+  for(const atelier of app.workshops().slice())action('delete-workshop',{id:atelier.workshopId});
+  assert.equal(app.workshops().length,0);assert(app.validState(app.readState()));
+  assert.equal(JSON.parse(memory.get('wl_sandbox_workshops_v1')).length,0);
+  submit({id:'workshop-form',values:{title:'Premier atelier après suppression'}});
+  assert.equal(app.workshops().length,1);assert.equal(JSON.parse(memory.get('wl_sandbox_workshops_v1')).length,0);
 });
 console.log(tests+' scénarios validés. Aucun réseau, aucune donnée réelle.');
