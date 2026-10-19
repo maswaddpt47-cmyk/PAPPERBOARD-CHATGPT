@@ -1,3 +1,7 @@
+## Déploiement PHP de test — 19/10/2026
+
+**Mesuré** : le connecteur refuse la création d’une branche dans PAPPERBOARD (HTTP 403). Une installation isolée est préparée dans PAPPERBOARD-CHATGPT, branche `deploy/test-php`. Le job `acces` contrôle les trois secrets Alwaysdata sans en afficher les valeurs ; le déploiement est bloqué s’ils sont absents. Adresse prévue, pas encore confirmée : `https://wooclight.alwaysdata.net/test-chatgpt/admin.php`. Détails : `docs/DEPLOIEMENT-TEST.md`.
+
 ## Consigne de suivi — 19/10/2026
 
 Consigne utilisateur : signaler immédiatement un blocage avec sa cause et les solutions possibles, borner les commandes et abandonner une méthode qui échoue. Protocole inscrit dans `AGENTS.md`, référencé par `CLAUDE.md`. Aucun changement de comportement de l’application.

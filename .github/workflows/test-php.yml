@@ -1,0 +1,114 @@
+name: Application complete sur Alwaysdata - test
+
+on:
+  push:
+    branches: [deploy/test-php]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wooclight-test-chatgpt
+  cancel-in-progress: false
+
+env:
+  TEST_URL: https://wooclight.alwaysdata.net/test-chatgpt
+
+jobs:
+  acces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verifier les acces existants sans afficher les secrets
+        env:
+          COMPTE: ${{ secrets.ALWAYSDATA_COMPTE }}
+          CLE: ${{ secrets.ALWAYSDATA_SSH_KEY }}
+          HOTES: ${{ secrets.ALWAYSDATA_KNOWN_HOSTS }}
+        run: |
+          manquants=""
+          [ -n "$COMPTE" ] || manquants="$manquants ALWAYSDATA_COMPTE"
+          [ -n "$CLE" ] || manquants="$manquants ALWAYSDATA_SSH_KEY"
+          [ -n "$HOTES" ] || manquants="$manquants ALWAYSDATA_KNOWN_HOSTS"
+          if [ -n "$manquants" ]; then
+            echo "::error::Secrets GitHub manquants :$manquants"
+            exit 1
+          fi
+          if [ "$COMPTE" != "wooclight" ]; then
+            echo "::error::Le compte configure ne correspond pas au site de test attendu."
+            exit 1
+          fi
+
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Verifier l'installation isolee
+        run: |
+          php -l scripts/installer-test.php
+          php tests/installer-test.php
+          bash tests/run.sh
+
+  deployer:
+    needs: [acces, verifier]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: test-php
+      url: https://wooclight.alwaysdata.net/test-chatgpt/admin.php
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Preparer SSH et les seuls fichiers de l'application
+        env:
+          CLE: ${{ secrets.ALWAYSDATA_SSH_KEY }}
+          HOTES: ${{ secrets.ALWAYSDATA_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$CLE" | tr -d '\r' > ~/.ssh/id_ed25519
+          printf '%s\n' "$HOTES" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          umask 022
+          mkdir -p application
+          cp .htaccess admin.php api.php config.sample.php configurer.php index.php lib.php purge.php screen.php application/
+          cp -a assets application/assets
+      - name: Configurer le test dans un dossier separe
+        env:
+          COMPTE: ${{ secrets.ALWAYSDATA_COMPTE }}
+        run: |
+          cible="$COMPTE@ssh-wooclight.alwaysdata.net"
+          timeout 15s scp -B -o ConnectTimeout=10 -o ConnectionAttempts=1 -o StrictHostKeyChecking=yes \
+            scripts/installer-test.php "$cible:wooclight-installer-$GITHUB_SHA.php"
+          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 -o ConnectionAttempts=1 -o StrictHostKeyChecking=yes \
+            "$cible" "php 'wooclight-installer-$GITHUB_SHA.php' '$GITHUB_SHA'"
+      - name: Copier uniquement dans www/test-chatgpt
+        env:
+          COMPTE: ${{ secrets.ALWAYSDATA_COMPTE }}
+        run: |
+          timeout 15s rsync -az --timeout=10 \
+            -e 'ssh -o BatchMode=yes -o ConnectTimeout=10 -o ConnectionAttempts=1 -o StrictHostKeyChecking=yes' \
+            application/ "$COMPTE@ssh-wooclight.alwaysdata.net:www/test-chatgpt/"
+          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 -o ConnectionAttempts=1 -o StrictHostKeyChecking=yes \
+            "$COMPTE@ssh-wooclight.alwaysdata.net" 'php www/test-chatgpt/purge.php'
+      - name: Verifier la version, les pages et les protections sur le vrai serveur
+        run: |
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 15 "$TEST_URL/version-test.txt" | \
+            grep -Fx "$GITHUB_SHA"
+          for page in index.php admin.php screen.php assets/style.css assets/admin.js; do
+            code=$(curl --silent --show-error --connect-timeout 5 --max-time 15 -o /dev/null -w '%{http_code}' "$TEST_URL/$page")
+            echo "$page : HTTP $code"
+            [ "$code" = 200 ] || exit 1
+          done
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 15 -I "$TEST_URL/index.php" | \
+            grep -qi "content-security-policy: default-src 'none'"
+          for interne in config.php lib.php config.sample.php configurer.php purge.php .htaccess .wooclight-chatgpt.json data/ tests/; do
+            code=$(curl --silent --show-error --connect-timeout 5 --max-time 15 -o /dev/null -w '%{http_code}' "$TEST_URL/$interne")
+            echo "$interne : HTTP $code"
+            case "$code" in 403|404) ;; *) exit 1 ;; esac
+          done
+          printf 'Application de test : %s/admin.php\n' "$TEST_URL" >> "$GITHUB_STEP_SUMMARY"
