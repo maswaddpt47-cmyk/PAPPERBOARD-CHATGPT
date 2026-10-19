@@ -68,15 +68,6 @@ Un bloc tranché sort du fichier : sa conclusion remonte dans `CHANTIERS.md`
 
 ## Blocs ouverts
 
-## AG-007 — Contraste des variantes de graphes — ouvert le 19/10/2026
-**Auteur** : session A — Codex / ChatGPT (identifiant `Claude-Session` : manquant) — lu sur `3a99948`, copie locale `codex/charte-pc`.
-**Proposition** : conserver les huit primitifs validés ; foncer uniquement les variantes claires de série moutarde (`#8A6500`) et neutre (`#7A6A5C`), réutiliser la moutarde contrastée pour les pastilles, et adapter les mêmes séries du PowerPoint. Les variantes de projection sombre restent celles d'AG-006.
-**Critère déclencheur** : 5 — les variantes d'AG-006 sont explicitement gardées dans `CHANTIERS.md`. Cette correction de rendu est réversible, mais son écart à cette note est soumis avant modification.
-**Ce que ça engage** : aucune règle de vote ni donnée ; deux variantes et leur déclinaison PowerPoint. La palette de base reste identique.
-**Non vérifié par l'auteur** : rendu visuel au navigateur et projection physique, impossibles dans cet environnement. Mesuré le 19/10/2026 : `node tests/contrastes.js` échoue sur 7 couples ; moutarde/trace 2,322:1, neutre/trace 2,824:1, pastille/trace 1,528:1, moutarde/piste PowerPoint 2,498:1. Les 119 couples sont calculés à partir des jetons et du code d'export, pas des commentaires.
-**Si personne ne répond, je fais quoi ?** : livrer cette variante dans la copie d'essai demandée par l'utilisateur, sans fusion ni déploiement ; garder l'arbitrage sur la palette de production à l'utilisateur.
-**Où regarder** : au ref `3a99948`, `assets/style.css:47` (séries), `assets/style.css:49` (pastilles), `assets/style.css:368` (jauge), `assets/bilan-pptx.js:32` (palette) ; `tests/contrastes.js:48` (couples sur les fonds réellement utilisés).
-
 ## Blocs tranchés
 
 | Bloc | Date | Verdict | Décision |
@@ -87,6 +78,7 @@ Un bloc tranché sort du fichier : sa conclusion remonte dans `CHANTIERS.md`
 | AG-004 avant / après sur les mêmes personnes | 17/10/2026 | confirmé | Seuil de 3 et texte « mêmes N personnes » gardés. Limites notées : trois personnes passant toutes de 0 % à 100 % laissent voir le changement de chacune. |
 | AG-005 thèmes ajoutés (`seances.json`) | 17/10/2026 | amendé | Stockage serveur gardé. Amendement juste, reproduit en e2e puis corrigé : un texte collé depuis l'application mobile d'une IA (`\[ \]`) est accepté, comme à l'import (`2eb4dc7`). |
 | AG-006 nouvelle charte graphique | 18/10/2026 | amendé | Évolution de « Papier & Terre », pas un remplacement. Les trois amendements de Codex sont traités : palette cible validée par l'utilisateur le 18/10/2026 (8 valeurs, variantes et contrastes mesurés), PowerPoint adapté (`bilan-pptx.js`), ratios remesurés sur les jetons réels (`tests/charte.php`). Georgia / Verdana, projection sombre bleu pétrole et projection claire gardés ; ne pas défaire sans nouveau bloc. |
+| AG-007 contraste des variantes de graphes | 19/10/2026 | contredit (utilisateur) | Refusé par l'utilisateur le 19/10/2026 pour la production : moutarde `#B18400` et neutre de série d'AG-006 gardés. La variante `#8A6500` reste propre à cette copie d'essai. |
 
-Total des verdicts : 1 confirmé, 5 amendé, 0 contredit. Un des quatre amendements (AG-001) s'est
+Total des verdicts : 1 confirmé, 5 amendé, 1 contredit. Un des quatre amendements (AG-001) s'est
 révélé faux à la vérification : un verdict « amendé » n'est pas une preuve qu'il y avait un défaut.
