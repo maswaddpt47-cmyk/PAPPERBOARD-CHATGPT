@@ -53,6 +53,15 @@ async function fits(page, label) {
     await animateur.locator('[data-action="tab"][data-tab="live"]').click();
     await animateur.locator('[data-action="toggle-vote"]').click();
     const initial = await animateur.evaluate(() => JSON.parse(localStorage.getItem('wl_sandbox_v3')));
+    await animateur.setViewportSize({width: 1280, height: 720});
+    await animateur.locator('[data-nav="history"]').evaluate(node => node.click());
+    await tooltipFor(animateur.getByRole('button', {name: 'Créer une session de démonstration', exact: true}), 'participants et des réponses fictifs');
+    await animateur.getByRole('button', {name: 'Créer une session de démonstration', exact: true}).click();
+    await tooltipFor(animateur.getByRole('dialog').getByRole('button', {name: 'Créer la démo', exact: true}), '12 participants fictifs');
+    check(await animateur.getByRole('dialog').isVisible(), 'Echap sur l’info-bulle ferme le formulaire');
+    await animateur.getByRole('dialog').getByRole('button', {name: 'Annuler', exact: true}).click();
+    await animateur.locator('[data-nav="workshop"]').evaluate(node => node.click());
+    await animateur.locator('[data-action="tab"][data-tab="live"]').click();
     await projection.goto(url + '?projection=1');
     const cases = initial.questions.map(q => JSON.parse(JSON.stringify(q)));
     const wordcloud = {...cases[5], type: 'wordcloud', title: 'Quels mots retenez-vous ?', responses: 8, texts: ['Prudence', 'Vérifier', 'Prudence', 'Calme', 'Adresse officielle', 'Conseil', 'Entraide', 'Vérifier']};
@@ -246,7 +255,10 @@ async function fits(page, label) {
     async function tooltipFor(button, content) {
       await button.hover();
       const tip = animateur.getByRole('tooltip').filter({hasText: content});
-      await tip.waitFor();
+      try { await tip.waitFor(); } catch (error) {
+        console.error('Diagnostic info-bulle', await animateur.evaluate(() => ({active: document.activeElement && document.activeElement.outerHTML.slice(0, 350),tooltip: document.getElementById('action-tooltip') && document.getElementById('action-tooltip').outerHTML,scroll: scrollY})));
+        throw error;
+      }
       check((await tip.textContent()).includes(content), 'Info-bulle incorrecte : ' + content);
       check((await button.getAttribute('aria-describedby') || '').includes('action-tooltip'), 'Info-bulle non reliee au bouton');
       const rect = await tip.boundingBox(), size = animateur.viewportSize();

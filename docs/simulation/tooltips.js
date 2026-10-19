@@ -92,8 +92,8 @@
     if (node.matches('a.btn') && /index\.html/.test(node.getAttribute('href') || '')) return 'Ouvrir la galerie des formes de graphes et de résultats.';
     return node.getAttribute('title') || label;
   }
-  function hide() {
-    clearTimeout(timer); clearTimeout(closing);
+  function dismissVisible() {
+    clearTimeout(closing);
     if (owner) {
       if (priorDescription === null) owner.removeAttribute('aria-describedby'); else owner.setAttribute('aria-describedby', priorDescription);
       if (priorTitle !== null) owner.setAttribute('title', priorTitle);
@@ -101,6 +101,7 @@
     }
     if (tooltip) { if (typeof tooltip.hidePopover === 'function' && tooltip.matches(':popover-open')) tooltip.hidePopover(); tooltip.hidden = true; }
   }
+  function hide() { clearTimeout(timer); dismissVisible(); }
   function show(node) {
     hide();
     var content = explanation(node);
@@ -139,7 +140,7 @@
     hide();
     if (visible) { event.preventDefault(); event.stopImmediatePropagation(); }
   }, true);
-  document.addEventListener('scroll', function (event) { if (!tooltip || !tooltip.contains(event.target)) hide(); }, true);
+  document.addEventListener('scroll', function (event) { if (!tooltip || !tooltip.contains(event.target)) dismissVisible(); }, true);
   window.addEventListener('resize', hide);
   new MutationObserver(function () { if (owner && !owner.isConnected) hide(); }).observe(document.body, { childList: true, subtree: true });
 }());
