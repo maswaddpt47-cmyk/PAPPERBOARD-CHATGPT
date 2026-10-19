@@ -7,6 +7,7 @@
   if (!workspace) return;
   var activeView = 'workshop';
   var activeTab = 'prep';
+  var workshopTabs = [['prep', 'Préparer', 'list'], ['control', 'Pilotage', 'settings'], ['live', 'Animer', 'play'], ['recap', 'Bilan', 'chart']];
   var modalKind = '';
   var dialog = null;
   var dialogReturnFocus = null;
@@ -245,9 +246,9 @@
     var subtitle = badge(state.libraryId === 'custom' ? 'Atelier personnalisé' : 'Atelier de démonstration', 'neutral') + ' <span class="heading-detail">Essai local · ' + state.questions.length + ' questions</span>';
     workspace.innerHTML = heading('VOTRE ATELIER', state.title, subtitle,
       button('participant', 'Aperçu participant', 'phone', 'secondary', isDisabled(!state.questions.length || state.archived)) + button('result-gallery', 'Galerie des résultats', 'chart', 'secondary') + projectionLink()) +
-      (state.archived ? '<div class="archive-notice"><p>Cet atelier est archivé. Son bilan reste consultable ; restaurez-le pour le modifier ou l’animer.</p>' + button('restore-workshop', 'Restaurer l’atelier', 'refresh', 'secondary small', 'data-id="' + esc(state.workshopId) + '"') + '</div>' : '') + '<div class="view-tabs" role="tablist" aria-label="Étapes de l’atelier">' + [['prep', 'Préparer', 'list'], ['live', 'Animer', 'play'], ['recap', 'Bilan', 'chart']].map(function (tab) {
+      (state.archived ? '<div class="archive-notice"><p>Cet atelier est archivé. Son bilan reste consultable ; restaurez-le pour le modifier ou l’animer.</p>' + button('restore-workshop', 'Restaurer l’atelier', 'refresh', 'secondary small', 'data-id="' + esc(state.workshopId) + '"') + '</div>' : '') + '<div class="view-tabs" id="workshop-tabs" role="tablist" aria-label="Étapes de l’atelier">' + workshopTabs.map(function (tab) {
         return '<button type="button" role="tab" id="tab-' + tab[0] + '" class="tab' + (activeTab === tab[0] ? ' active' : '') + '" aria-selected="' + (activeTab === tab[0]) + '" aria-controls="workshop-panel" tabindex="' + (activeTab === tab[0] ? '0' : '-1') + '" data-action="tab" data-tab="' + tab[0] + '" ' + isDisabled(state.archived && tab[0] !== 'recap') + '>' + ico(tab[2]) + tab[1] + '</button>';
-      }).join('') + '</div><div id="workshop-panel" role="tabpanel" aria-labelledby="tab-' + activeTab + '">' + (activeTab === 'prep' ? preparation() : activeTab === 'recap' ? recap() : live()) + '</div>';
+      }).join('') + '</div><div id="workshop-panel" role="tabpanel" aria-labelledby="tab-' + activeTab + '">' + (activeTab === 'prep' ? preparation() : activeTab === 'control' ? pilotage() : activeTab === 'recap' ? recap() : live()) + '</div>';
   }
 
   function rail() {
@@ -288,13 +289,28 @@
 
   function live() {
     var q = current();
-    if (!q) return liveSessionControls() + '<section class="panel empty-state"><h2>Aucune question pour le moment</h2><p>Ajoutez votre première question pour lancer l’animation.</p><div class="empty-workshop-actions">' + button('add-question', 'Ajouter une question', 'plus', 'primary') + '</div></section>';
+    if (!q) return liveSessionSummary() + '<section class="panel empty-state"><h2>Aucune question pour le moment</h2><p>Ajoutez votre première question pour lancer l’animation.</p><div class="empty-workshop-actions">' + button('add-question', 'Ajouter une question', 'plus', 'primary') + '</div></section>';
     var complete = q.responses >= state.capacity;
-    return liveSessionControls() + '<div class="workbench">' + rail() + '<section class="panel current-panel" id="current-question"><nav class="toolbar-nav question-navigation" aria-label="Navigation entre les questions">' + button('previous', 'Précédente', 'arrow-left', 'ghost small', isDisabled(sessionSettings().welcome)) + '<span class="muted">' + (sessionSettings().welcome ? 'Accueil' : (state.current + 1) + ' / ' + state.questions.length) + '</span>' + button('next', sessionSettings().welcome ? 'Commencer les questions' : 'Suivante', 'arrow-right', 'secondary small', isDisabled(!sessionSettings().welcome && state.current === state.questions.length - 1)) + '</nav>' + (sessionSettings().welcome ? '<p class="info-note">La projection affiche l’accueil avec le code et l’adresse. « Commencer les questions » lance la première question et ouvre son vote.</p>' : '') + '<div class="question-topline">' + badge('Question ' + (state.current + 1) + ' sur ' + state.questions.length, 'neutral') + badge(state.ended ? 'Atelier terminé' : stateLabel(q), q.state === 'open' && !state.ended ? 'green' : 'neutral') + '<span class="question-type">' + esc(typeLabel(q)) + '</span></div><h2 class="question-title">' + esc(q.title) + '</h2><p class="question-description">' + esc(q.description) + '</p><div class="result-explainer"><span>' + ico('chart') + ' Vue animateur</span><span>' + (q.published ? ico('eye') + ' Résultats visibles par les participants' : ico('eye-off') + ' Résultats masqués aux participants') + '</span></div>' + answers(q, false) +
+    return liveSessionSummary() + '<div class="workbench">' + rail() + '<section class="panel current-panel" id="current-question"><nav class="toolbar-nav question-navigation" aria-label="Navigation entre les questions">' + button('previous', 'Précédente', 'arrow-left', 'ghost small', isDisabled(sessionSettings().welcome)) + '<span class="muted">' + (sessionSettings().welcome ? 'Accueil' : (state.current + 1) + ' / ' + state.questions.length) + '</span>' + button('next', sessionSettings().welcome ? 'Commencer les questions' : 'Suivante', 'arrow-right', 'secondary small', isDisabled(!sessionSettings().welcome && state.current === state.questions.length - 1)) + '</nav>' + (sessionSettings().welcome ? '<p class="info-note">La projection affiche l’accueil avec le code et l’adresse. « Commencer les questions » lance la première question et ouvre son vote.</p>' : '') + '<div class="question-topline">' + badge('Question ' + (state.current + 1) + ' sur ' + state.questions.length, 'neutral') + badge(state.ended ? 'Atelier terminé' : stateLabel(q), q.state === 'open' && !state.ended ? 'green' : 'neutral') + '<span class="question-type">' + esc(typeLabel(q)) + '</span></div><h2 class="question-title">' + esc(q.title) + '</h2><p class="question-description">' + esc(q.description) + '</p><div class="result-explainer"><span>' + ico('chart') + ' Vue animateur</span><span>' + (q.published ? ico('eye') + ' Résultats visibles par les participants' : ico('eye-off') + ' Résultats masqués aux participants') + '</span></div>' + answers(q, false) +
       '<div class="live-toolbar"><div class="toolbar-main">' + button('toggle-vote', q.state === 'open' ? 'Fermer le vote' : 'Ouvrir le vote', q.state === 'open' ? 'pause' : 'play', 'primary', isDisabled(state.ended)) + button('toggle-results', q.published ? 'Masquer les résultats' : 'Afficher les résultats', q.published ? 'eye-off' : 'eye', 'secondary') + '</div></div><div class="simulation-row"><span>' + ico('sparkles') + ' Essayez l’atelier avec des réponses fictives.</span>' + button('simulate', complete ? 'Toutes les réponses reçues' : 'Simuler une réponse', 'plus', 'ghost small', isDisabled(complete || q.state !== 'open' || state.ended)) + '</div></section>' +
       '<aside class="insights"><section class="panel metric-card"><div class="panel-head"><h2 class="panel-title">Participation</h2>' + ico('users') + '</div><div class="metric-number">' + q.responses + '<span> / ' + state.capacity + '</span></div><p class="metric-caption">' + (q.type === 'steps' ? 'personnes ont participé' : 'personnes ont répondu') + '</p><div class="progress-track" role="progressbar" aria-label="Réponses reçues" aria-valuemin="0" aria-valuemax="' + state.capacity + '" aria-valuenow="' + q.responses + '"><span class="progress-fill" style="width:' + Math.min(q.responses / state.capacity * 100, 100) + '%"></span></div><p class="muted">' + (complete ? 'Tout le monde a répondu.' : (state.capacity - q.responses) + ' réponses encore attendues') + '</p></section>' +
-      '<section class="panel help-card"><div class="panel-head"><h2 class="panel-title">Besoin d’un coup de main</h2></div><div class="signal-row"><span class="signal-icon">' + ico('hand') + '</span><span class="signal-copy">Je suis un peu perdu</span><strong class="signal-count">' + state.helpCount + '</strong></div><p class="muted">Un signal anonyme, pour adapter votre rythme.</p>' + (state.helpCount ? button('acknowledge-help', 'C’est pris en compte', 'check', 'ghost small') : '<p class="info-note">Vous avez pris le temps de faire le point.</p>') + '</section>' +
-      asksControls() + '<p class="info-note">' + ico('help') + ' Ceci est un atelier d’essai. Tout reste dans ce navigateur.</p></aside></div><div class="session-footer">' + button('reset-question', 'Réinitialiser la question', 'refresh', 'danger small', isDisabled(state.ended)) + button('end-session', state.ended ? 'Rouvrir l’atelier' : 'Terminer l’atelier', state.ended ? 'refresh' : 'check-circle', 'ghost small') + '</div>';
+      '<p class="info-note">' + ico('help') + ' Ceci est un atelier d’essai. Tout reste dans ce navigateur.</p></aside></div><div class="session-footer">' + button('reset-question', 'Réinitialiser la question', 'refresh', 'danger small', isDisabled(state.ended)) + button('end-session', state.ended ? 'Rouvrir l’atelier' : 'Terminer l’atelier', state.ended ? 'refresh' : 'check-circle', 'ghost small') + '</div>';
+  }
+  function pilotage() {
+    return '<div class="pilotage-toolbar"><p class="muted">Gérez l’accueil, les inscriptions et les échanges du groupe. Les questions et les votes se pilotent depuis Animer.</p>' + button('go-live', 'Aller aux questions', 'play', 'primary') + '</div>' + liveSessionControls() + '<div class="pilotage-questions">' + asksControls() + '</div>';
+  }
+  function liveSessionSummary() {
+    var s = sessionSettings();
+    var signals = s.signals.fast + s.signals.again + s.signals.help;
+    var pending = s.asks.filter(function (ask) { return !ask.published; }).length;
+    return '<section class="live-session-summary" aria-label="État de la session"><div><span>' + ico('users') + ' ' + state.participants + ' / ' + state.capacity + ' inscrits fictifs</span><span>Inscriptions ' + (s.registrationsOpen ? 'ouvertes' : 'fermées') + '</span><span>' + signals + ' signal' + (signals > 1 ? 's' : '') + '</span><span>Oser demander : ' + (s.asksOpen ? 'ouvert' : 'fermé') + ' · ' + pending + ' à relire</span></div>' + button('go-pilotage', 'Ouvrir Pilotage', 'settings', 'secondary small') + '</section>';
+  }
+  function openWorkshopTab(tab) {
+    activeView = 'workshop'; activeTab = tab; render();
+    var target = document.getElementById('tab-' + activeTab);
+    if (target) target.focus({ preventScroll: true });
+    var tabs = document.getElementById('workshop-tabs');
+    if (tabs && typeof tabs.scrollIntoView === 'function') tabs.scrollIntoView({ block: 'start', behavior: 'auto' });
   }
   function sessionCode() {
     var hash = 2166136261, id = state.workshopId || state.title;
@@ -740,7 +756,7 @@
     toast('Votre mémo de démonstration a été téléchargé.');
   }
   function help() {
-    showDialog('Faites un tour de l’atelier', '<div class="stack"><p>Vous êtes dans une maquette interactive. Les 18 participants et toutes leurs réponses sont fictifs.</p><ol class="help-steps"><li><strong>Animer :</strong> choisissez une question, ouvrez son vote et simulez des réponses.</li><li><strong>Aperçu participant :</strong> répondez comme un membre du groupe. Votre réponse alimente les graphiques.</li><li><strong>Projection :</strong> les réponses du groupe restent masquées tant que vous ne cliquez pas sur « Afficher les résultats ».</li><li><strong>Préparer et Bilan :</strong> modifiez les questions, puis téléchargez un CSV ou un mémo.</li></ol><p class="info-note">Votre essai reste dans ce navigateur. « Recommencer » permet de repartir du début.</p></div>', button('close-dialog', 'C’est parti', 'arrow-right', 'primary'), 'help');
+    showDialog('Faites un tour de l’atelier', '<div class="stack"><p>Vous êtes dans une maquette interactive. Les 18 participants et toutes leurs réponses sont fictifs.</p><ol class="help-steps"><li><strong>Pilotage :</strong> gérez le QR, les inscriptions, les signaux, les questions anonymes et le podium.</li><li><strong>Animer :</strong> choisissez une question, ouvrez son vote et simulez des réponses.</li><li><strong>Aperçu participant :</strong> répondez comme un membre du groupe. Votre réponse alimente les graphiques.</li><li><strong>Projection :</strong> les réponses du groupe restent masquées tant que vous ne cliquez pas sur « Afficher les résultats ».</li><li><strong>Préparer et Bilan :</strong> modifiez les questions, puis téléchargez un CSV ou un mémo.</li></ol><p class="info-note">Votre essai reste dans ce navigateur. « Recommencer » permet de repartir du début.</p></div>', button('close-dialog', 'C’est parti', 'arrow-right', 'primary'), 'help');
   }
 
   document.addEventListener('click', function (event) {
@@ -797,7 +813,9 @@
       if (conclusion.length > 600) { toast('La conclusion est limitée à 600 caractères.'); return; }
       state.conclusion = conclusion; save(); document.getElementById('conclusion-status').textContent = '✓ Conclusion enregistrée pour la fin de l’atelier.'; toast('La conclusion est enregistrée.'); return;
     }
-    if (action === 'tab') { activeTab = target.dataset.tab; render(); document.getElementById('tab-' + activeTab).focus(); return; }
+    if (action === 'tab') { openWorkshopTab(target.dataset.tab); return; }
+    if (action === 'go-pilotage') { openWorkshopTab('control'); return; }
+    if (action === 'go-live') { openWorkshopTab('live'); return; }
     if (action === 'close-dialog') { closeDialog(); return; }
     if (action === 'participant') { participant(); return; }
     if (action === 'projection') { if (!save()) { event.preventDefault(); toast('Impossible d’enregistrer l’atelier pour ouvrir la projection. Réessayez.'); } return; }
@@ -898,7 +916,7 @@
       if (isWritten(q) ? !text : !checked.length) { document.getElementById('participant-error').textContent = isWritten(q) ? 'Écrivez quelques mots avant d’envoyer.' : 'Choisissez au moins une réponse.'; return; }
       if (!recordAnswer(q, checked, text)) return;
       render();
-      showDialog('Votre réponse est envoyée', '<div class="participant-success">' + ico('check-circle') + '<h3>Merci, c’est bien reçu !</h3><p>Vous venez d’ajouter une réponse fictive à l’atelier.</p><p class="muted">' + q.responses + ' personnes sur ' + state.capacity + ' ont répondu.</p></div>', button('close-dialog', 'Revenir à l’animation', 'arrow-left', 'primary'), 'participant');
+      showDialog('Votre réponse est envoyée', '<div class="participant-success">' + ico('check-circle') + '<h3>Merci, c’est bien reçu !</h3><p>Votre réponse fictive est enregistrée. Laissez cet aperçu ouvert : il suivra automatiquement la prochaine question.</p><p class="muted">' + q.responses + ' personnes sur ' + state.capacity + ' ont répondu.</p></div>', button('close-dialog', 'Fermer l’aperçu', 'close', 'secondary'), 'participant');
       dialog.dataset.questionId = q.id; dialog.dataset.sent = 'true';
       return;
     }
@@ -933,7 +951,7 @@
   });
   document.addEventListener('keydown', function (event) {
     if (event.target.getAttribute('role') !== 'tab') return;
-    var order = state.archived ? ['recap'] : ['prep', 'live', 'recap'];
+    var order = state.archived ? ['recap'] : workshopTabs.map(function (tab) { return tab[0]; });
     var offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
     if (!offset && event.key !== 'Home' && event.key !== 'End') return;
     event.preventDefault();

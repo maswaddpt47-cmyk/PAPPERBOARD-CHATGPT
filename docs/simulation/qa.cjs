@@ -167,11 +167,23 @@ test('Supprimer le dernier atelier laisse une liste vide et permet une nouvelle 
   submit({id:'workshop-form',values:{title:'Premier atelier après suppression'}});
   assert.equal(app.workshops().length,1);assert.equal(JSON.parse(memory.get('wl_sandbox_workshops_v1')).length,0);
 });
-test('Animer affiche un vrai QR local et les commandes de session',()=>{
+test('Pilotage regroupe la session et le retour vers Animer conserve la question',()=>{
   submit({id:'question-form',dataset:{index:''},values:{type:'yesno',title:'Question de pilotage',description:'',correct:'1'}});
-  action('tab',{tab:'live'});const html=elements.get('workspace').innerHTML;
+  action('tab',{tab:'live'});const before=JSON.stringify(app.state());
+  action('go-pilotage');const html=elements.get('workspace').innerHTML;
   assert(html.includes('data:image/gif;base64,'));
-  for(const control of ['toggle-registrations','toggle-qr','copy-invitation','share-invitation','reset-question','toggle-asks','toggle-pseudos','toggle-podium'])assert(html.includes('data-action="'+control+'"'));
+  for(const control of ['toggle-registrations','toggle-qr','copy-invitation','share-invitation','toggle-asks','toggle-pseudos','toggle-podium','project-asks'])assert(html.includes('data-action="'+control+'"'));
+  action('go-live');const live=elements.get('workspace').innerHTML;
+  assert(live.includes('data-action="reset-question"'));assert(live.includes('data-action="go-pilotage"'));
+  assert(!live.includes('data-action="toggle-registrations"'));assert(!live.includes('data-action="publish-question"'));
+  assert.equal(JSON.stringify(app.state()),before);
+  action('tab',{tab:'prep'});
+  const target=element();target.setAttribute('role','tab');
+  for(const expected of ['control','live','recap']){
+    (listeners.keydown||[]).forEach(fn=>fn({target,key:'ArrowRight',preventDefault(){}}));
+    assert.equal(document.activeElement.id,'tab-'+expected);
+  }
+  action('tab',{tab:'live'});
 });
 test('Fermer les inscriptions bloque les nouveaux inscrits sans bloquer les inscrits',()=>{
   action('simulate-registration');const registered=app.state().participants;assert.equal(registered,1);

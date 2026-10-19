@@ -22,11 +22,15 @@ conclusion avec les votes remis à zéro. Les archives restent dans la section
 La **Bibliothèque de modèles** contient les trois séances de démonstration,
 distinctes des ateliers créés et des archives.
 
-**Animer** regroupe le QR code généré localement, le code et le lien de
+L’atelier s’organise en **Préparer → Pilotage → Animer → Bilan**.
+**Pilotage** regroupe le QR code généré localement, le code et le lien de
 démonstration, la copie/le partage de l’invitation, les inscriptions simulées
-à fermer/rouvrir, le QR à afficher/masquer sur la projection, l’accueil et le
-pilotage des questions. Suivante ouvre le vote d’une question encore à venir ;
-Réinitialiser efface ses réponses après confirmation. Les trois signaux sont
+à fermer/rouvrir, le QR à afficher/masquer sur la projection et l’accueil.
+**Animer** se concentre sur la question courante, le vote et les résultats,
+avec un résumé compact de la session et un accès rapide à Pilotage. Passer
+de l’un à l’autre conserve la question et les réponses.
+Suivante ouvre le vote d’une question encore à venir ; Réinitialiser efface
+ses réponses après confirmation. Dans Pilotage, les trois signaux sont
 simulables et effaçables ; « Oser demander » s’ouvre/se ferme et permet de relire,
 publier, retirer ou supprimer une question. Pseudonymes et podium restent des
 exemples d’affichage ; les scores individuels ne sont pas calculés.
@@ -51,6 +55,8 @@ démonstration en conservant l’atelier précédent.
 L’aperçu participant suit aussi la question, l’ouverture du vote, l’accueil et
 la publication des résultats. Quand la question reste identique, son formulaire
 conserve la sélection ou le texte en cours de saisie lors d’une actualisation.
+Après l’envoi, laisser cet aperçu ouvert permet de suivre la prochaine question.
+Le bouton **Fermer l’aperçu** ferme volontairement cette fenêtre.
 
 Tout reste dans ce navigateur. Aucun compte ni serveur PHP n’est utilisé,
 aucune session partagée entre appareils n’est créée. Les huit types sondage,

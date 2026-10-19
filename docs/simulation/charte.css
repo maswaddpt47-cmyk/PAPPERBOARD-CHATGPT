@@ -48,6 +48,16 @@ h1, h2, h3, .brand-word, .metric-number { font-family: var(--wl-police-titre); }
 .projection-modal .modal-head, .projection-modal .modal-actions { border-color: var(--wl-bord); }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-color: var(--wl-focus); }
 #current-question { scroll-margin-top: 1rem; }
+#workshop-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; scroll-margin-top: .75rem; }
+#workshop-tabs .tab { min-width: 0; min-height: 44px; justify-content: center; padding-inline: .6rem; }
+.pilotage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.pilotage-toolbar p { flex: 1; min-width: 15rem; margin: 0; }
+.pilotage-questions { margin-bottom: 1.5rem; }
+.live-session-summary { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; padding: .8rem 1rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.live-session-summary > div { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; flex: 1; color: var(--muted); font-size: .75rem; }
+.live-session-summary span { display: inline-flex; align-items: center; gap: .4rem; }
+@media(max-width:639px) { #workshop-tabs .tab { font-size: .75rem; padding-inline: .25rem; gap: .35rem; } }
+@media(max-width:419px) { #workshop-tabs .icon { display: none; } }
 .empty-workshop-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
 .workshop-methods { border: 0; margin: 1.25rem 0; padding: 0; display: grid; gap: .75rem; min-width: 0; }
 .workshop-method { display: flex; align-items: flex-start; gap: .75rem; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--card); cursor: pointer; }
