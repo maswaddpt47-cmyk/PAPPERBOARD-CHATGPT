@@ -55,6 +55,10 @@ async function fits(page, label) {
     const initial = await animateur.evaluate(() => JSON.parse(localStorage.getItem('wl_sandbox_v3')));
     await animateur.setViewportSize({width: 1280, height: 720});
     await animateur.locator('[data-nav="history"]').evaluate(node => node.click());
+    await animateur.getByRole('button', {name: 'Créer une session de démonstration', exact: true}).hover();
+    await animateur.getByRole('tooltip').waitFor();
+    await animateur.getByRole('button', {name: 'Créer un atelier', exact: true}).first().hover();
+    await animateur.getByRole('tooltip').filter({hasText: 'JSON'}).waitFor();
     await tooltipFor(animateur.getByRole('button', {name: 'Créer une session de démonstration', exact: true}), 'participants et des réponses fictifs');
     await animateur.getByRole('button', {name: 'Créer une session de démonstration', exact: true}).click();
     await tooltipFor(animateur.getByRole('dialog').getByRole('button', {name: 'Créer la démo', exact: true}), '12 participants fictifs');

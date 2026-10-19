@@ -123,6 +123,7 @@
     if (event.pointerType === 'touch') return;
     if (tooltip && tooltip.contains(event.target)) { clearTimeout(closing); return; }
     var node = target(event); if (!node || (event.relatedTarget && node.contains(event.relatedTarget))) return;
+    clearTimeout(closing);
     clearTimeout(timer); timer = setTimeout(function () { show(node); }, 250);
   });
   document.addEventListener('pointerout', function (event) {
